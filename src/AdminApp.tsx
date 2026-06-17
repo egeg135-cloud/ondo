@@ -170,12 +170,7 @@ export default function AdminApp() {
                       <p>날짜: {a.wish_dates.slice().sort().map(formatDateLabel).join(', ')}</p>
                     ) : null}
                   </div>
-                  <SlotAssign
-                    appId={a.application_id}
-                    adminKey={key}
-                    openSlots={openSlots}
-                    onChange={reload}
-                  />
+                  <SlotAssign app={a} adminKey={key} openSlots={openSlots} onChange={reload} />
                 </div>
               ))}
             </div>
@@ -285,14 +280,28 @@ function SlotCreateForm({ adminKey, onCreated }: { adminKey: string; onCreated: 
   )
 }
 
+// 일반 신청의 희망(장소/날짜)에 가장 잘 맞는 열린 슬롯 추천
+function recommendSlot(app: AdminApplication, openSlots: Slot[]): Slot | null {
+  const places = new Set([...(app.wish_places_weekday ?? []), ...(app.wish_places_weekend ?? [])])
+  const dates = new Set(app.wish_dates ?? [])
+  const byDate = [...openSlots].sort((a, b) => a.date.localeCompare(b.date))
+  // 1순위: 장소+날짜 둘 다 일치 (가장 가까운 날)
+  const exact = byDate.find((s) => places.has(s.place) && dates.has(s.date))
+  if (exact) return exact
+  // 2순위: 장소만 일치
+  const placeOnly = byDate.find((s) => places.has(s.place))
+  if (placeOnly) return placeOnly
+  return null
+}
+
 // ───────────────────────── 일반 신청 → 슬롯 배정 ─────────────────────────
 function SlotAssign({
-  appId,
+  app,
   adminKey,
   openSlots,
   onChange,
 }: {
-  appId: string
+  app: AdminApplication
   adminKey: string
   openSlots: Slot[]
   onChange: () => void
@@ -300,11 +309,11 @@ function SlotAssign({
   const [slotId, setSlotId] = useState('')
   const [busy, setBusy] = useState(false)
 
-  async function assign() {
-    if (!slotId) return
+  async function assign(targetId: string) {
+    if (!targetId) return
     setBusy(true)
     try {
-      await assignSlot(adminKey, appId, slotId)
+      await assignSlot(adminKey, app.application_id, targetId)
       onChange()
     } catch (e) {
       alert(e instanceof Error ? e.message : '배정 실패')
@@ -317,28 +326,44 @@ function SlotAssign({
     return <p className="mt-2 text-xs text-navy/40">배정할 열린 슬롯이 없어요. 위에서 먼저 만들어 주세요.</p>
   }
 
+  const rec = recommendSlot(app, openSlots)
+
   return (
-    <div className="mt-2 flex items-center gap-2">
-      <select
-        value={slotId}
-        onChange={(e) => setSlotId(e.target.value)}
-        className="flex-1 rounded-lg border border-navy/15 px-2 py-1.5 text-xs text-navy bg-white"
-      >
-        <option value="">슬롯에 배정…</option>
-        {openSlots.map((s) => (
-          <option key={s.id} value={s.id}>
-            {formatDateLabel(s.date)} · {s.place} · 페이스 {s.pace_label ?? '?'}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        onClick={assign}
-        disabled={busy || !slotId}
-        className="shrink-0 rounded-lg bg-navy text-white text-xs font-semibold px-3 py-1.5 disabled:opacity-40"
-      >
-        배정
-      </button>
+    <div className="mt-2 space-y-1.5">
+      {/* 추천 자동 배정 */}
+      {rec && (
+        <button
+          type="button"
+          onClick={() => void assign(rec.id)}
+          disabled={busy}
+          className="w-full rounded-lg bg-sand/20 text-navy text-xs font-semibold px-3 py-2 text-left disabled:opacity-40 hover:bg-sand/30"
+        >
+          ⭐ 추천 배정: {formatDateLabel(rec.date)} · {rec.place} · 페이스 {rec.pace_label ?? '?'}
+        </button>
+      )}
+      {/* 수동 선택 */}
+      <div className="flex items-center gap-2">
+        <select
+          value={slotId}
+          onChange={(e) => setSlotId(e.target.value)}
+          className="flex-1 rounded-lg border border-navy/15 px-2 py-1.5 text-xs text-navy bg-white"
+        >
+          <option value="">직접 슬롯 선택…</option>
+          {openSlots.map((s) => (
+            <option key={s.id} value={s.id}>
+              {formatDateLabel(s.date)} · {s.place} · 페이스 {s.pace_label ?? '?'}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => void assign(slotId)}
+          disabled={busy || !slotId}
+          className="shrink-0 rounded-lg bg-navy text-white text-xs font-semibold px-3 py-1.5 disabled:opacity-40"
+        >
+          배정
+        </button>
+      </div>
     </div>
   )
 }
