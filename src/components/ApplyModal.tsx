@@ -8,7 +8,12 @@ import { formatPhoneInput, isValidPhone, saveLastPhone } from '../lib/format'
 import { FriendlyError, getMyProfile, submitApplication } from '../lib/api'
 
 const PACES: Pace[] = ['A', 'B', 'C', 'D']
-const PACE_SHORT: Record<Pace, string> = { A: '걷기', B: '조깅', C: '러닝', D: '빠른러닝' }
+const PACE_SHORT: Record<Pace, string> = {
+  A: '걷기',
+  B: '조깅 (7~8분)',
+  C: '러닝 (6~7분)',
+  D: '빠른 러닝 (5~6분)',
+}
 const PLACES: Place[] = ['여의도', '반포', '종로']
 const AGE_RANGES = ['20대', '30대 초', '30대 중', '30대 후', '40대+']
 const GENDERS: Gender[] = ['남', '여']
@@ -185,7 +190,12 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
                 </Chip>
               ))}
             </div>
-            {pace && <p className="text-xs text-navy/50 mt-1.5">{PACE_DESC[pace]}</p>}
+            {pace && (
+              <div className="mt-2 rounded-xl bg-navy/5 px-3 py-2.5">
+                <p className="text-sm text-navy/80 font-medium">{PACE_DESC[pace]}</p>
+                <p className="text-xs text-navy/40 mt-0.5">* 페이스 = 1km당 달리는 시간 (분/km)</p>
+              </div>
+            )}
           </Field>
 
           {/* 일반 신청일 때만: 희망 날짜(달력) → 평일/주말 희망 장소 */}

@@ -18,6 +18,52 @@ function getKeyFromUrl(): string {
   return new URLSearchParams(window.location.search).get('key') ?? ''
 }
 
+const STATUS_KO: Record<string, string> = {
+  applied: '신청접수',
+  confirmed: '매칭확정',
+  cancelled: '취소',
+}
+
+// 신청자 목록을 CSV(엑셀)로 내려받기. 엑셀 한글 깨짐 방지용 BOM 포함.
+function exportApplicantsCsv(apps: AdminApplication[]) {
+  const headers = [
+    '이름', '연락처', '페이스', '성별', '나이', '신규/재참여',
+    '상태', '입금', '초대', '슬롯날짜', '슬롯장소',
+    '희망평일장소', '희망주말장소', '희망날짜', '신청일시',
+  ]
+  const cell = (v: unknown) => {
+    const s = v == null ? '' : String(v)
+    return `"${s.replace(/"/g, '""')}"`
+  }
+  const rows = apps.map((a) => [
+    a.user_name,
+    a.user_phone,
+    a.user_pace ?? '',
+    a.user_gender ?? '',
+    a.user_age_range ?? '',
+    a.user_total_count > 0 || a.prior_participations > 0
+      ? `재참여(${a.prior_participations || a.user_total_count}회)`
+      : '신규',
+    STATUS_KO[a.status] ?? a.status,
+    a.paid ? 'O' : '',
+    a.invited ? 'O' : '',
+    a.slot_date ?? '',
+    a.slot_place ?? '',
+    (a.wish_places_weekday ?? []).join(' '),
+    (a.wish_places_weekend ?? []).join(' '),
+    (a.wish_dates ?? []).slice().sort().join(' '),
+    new Date(a.created_at).toLocaleString('ko-KR'),
+  ])
+  const csv = [headers, ...rows].map((r) => r.map(cell).join(',')).join('\r\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `ondo_신청자_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 interface SlotGroup {
   slotId: string
   date: string | null
@@ -129,9 +175,19 @@ export default function AdminApp() {
             <p className="text-xs tracking-[0.25em] text-sand font-semibold">ONDO ADMIN</p>
             <h1 className="text-xl font-bold text-navy">운영자 대시보드</h1>
           </div>
-          <button type="button" onClick={reload} className="text-sm text-navy/60 underline underline-offset-2">
-            새로고침
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => exportApplicantsCsv(apps ?? [])}
+              disabled={!apps || apps.length === 0}
+              className="text-sm font-semibold text-navy underline underline-offset-2 disabled:text-navy/30 disabled:no-underline"
+            >
+              엑셀 내보내기
+            </button>
+            <button type="button" onClick={reload} className="text-sm text-navy/60 underline underline-offset-2">
+              새로고침
+            </button>
+          </div>
         </header>
 
         {error && <p className="text-sm text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{error}</p>}
