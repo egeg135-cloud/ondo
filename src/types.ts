@@ -51,6 +51,14 @@ export const PACE_DESC: Record<Pace, string> = {
   D: '빠른 러닝 (5분대)',
 }
 
+// 슬롯 카드 등 노출용 — 페이스를 직관적으로 풀어쓴 라벨 (분/km 구간 포함)
+export const PACE_SLOT_LABEL: Record<Pace, string> = {
+  A: '걷듯 천천히 · 8~9분/km',
+  B: '가벼운 조깅 · 7~8분/km',
+  C: '꾸준한 러닝 · 6~7분/km',
+  D: '빠른 러닝 · 5~6분/km',
+}
+
 export const PACE_ORDER: Record<Pace, number> = { A: 0, B: 1, C: 2, D: 3 }
 
 // 장소별 집합지 안내

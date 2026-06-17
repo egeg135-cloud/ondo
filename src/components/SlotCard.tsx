@@ -1,5 +1,7 @@
 import type { SlotWithStats } from '../lib/api'
 import { formatDateLabel } from '../lib/dates'
+import { PACE_SLOT_LABEL } from '../types'
+import type { Pace } from '../types'
 
 interface SlotCardProps {
   slot: SlotWithStats
@@ -8,7 +10,10 @@ interface SlotCardProps {
 
 export function SlotCard({ slot, onApply }: SlotCardProps) {
   const { stats } = slot
-  const { count, female, male, ageLabel, isFull, isAlmostFull } = stats
+  const { count, isFull, isAlmostFull } = stats
+  const paceText = slot.pace_label
+    ? (PACE_SLOT_LABEL[slot.pace_label as Pace] ?? `페이스 ${slot.pace_label}`)
+    : null
 
   return (
     <div className="rounded-2xl bg-white border border-navy/10 p-4 flex items-center justify-between gap-3">
@@ -28,9 +33,7 @@ export function SlotCard({ slot, onApply }: SlotCardProps) {
           <span className={isFull ? 'text-navy/40' : 'text-sand font-semibold'}>
             {count}/{slot.max_members}명
           </span>
-          {slot.pace_label && <Dot label={`페이스 ${slot.pace_label}`} />}
-          {ageLabel && <Dot label={ageLabel} />}
-          {count > 0 && <Dot label={`여${female}남${male}`} />}
+          {paceText && <Dot label={paceText} />}
         </div>
       </div>
 
