@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(kill 98163)",
+      "Bash(npm run *)",
+      "Bash(npm -v)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"---TSC EXIT: $?---\")",
+      "Bash(curl -s \"http://localhost:5173/src/main.tsx\")",
+      "Bash(curl -s \"http://localhost:5173/src/App.tsx\")",
+      "Bash(curl -s \"http://localhost:5173/\")"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+# Netlify 배포 설정
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA 라우팅: /admin 등 모든 경로를 index.html 로 폴백 (새로고침 404 방지)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
