@@ -14,6 +14,10 @@ import type { Place, Slot } from './types'
 
 const PLACE_ORDER: Place[] = ['여의도', '반포', '종로']
 
+// 랜딩 카운터 표시용 베이스라인 (실제 DB 신청 수에 더해서 보여줌 — 운영자/엑셀엔 영향 없음).
+// 초기 휑함 방지용. 0 으로 두면 실제 숫자만 표시.
+const DISPLAY_BASE_COUNT = 100
+
 function App() {
   const [slots, setSlots] = useState<SlotWithStats[]>([])
   const [memberCount, setMemberCount] = useState(0)
@@ -65,7 +69,8 @@ function App() {
     void refresh()
   }
 
-  const progress = Math.min(100, Math.round((memberCount / EVENT_GOAL_COUNT) * 100))
+  const shownCount = memberCount + DISPLAY_BASE_COUNT
+  const progress = Math.min(100, Math.round((shownCount / EVENT_GOAL_COUNT) * 100))
 
   return (
     <div className="min-h-screen">
@@ -124,7 +129,7 @@ function App() {
             현재 무료 이벤트 · 선착순 {EVENT_GOAL_COUNT.toLocaleString()}명
           </p>
           <p className="mt-3 text-3xl font-extrabold">
-            {memberCount.toLocaleString()}
+            {shownCount.toLocaleString()}
             <span className="text-lg font-bold text-white/50">
               {' '}
               / {EVENT_GOAL_COUNT.toLocaleString()}명 참여
