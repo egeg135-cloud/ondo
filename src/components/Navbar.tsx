@@ -16,13 +16,6 @@ export function Navbar({ session, onMyApps }: NavbarProps) {
 
         {session ? (
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onMyApps}
-              className="flex items-center rounded-lg bg-white text-[#191600] font-semibold text-xs px-3 py-1.5"
-            >
-              내 신청 내역
-            </button>
             <span className="text-xs text-white/60">
               <span className="font-semibold text-white">{displayName(session)}</span>님
             </span>
@@ -32,6 +25,13 @@ export function Navbar({ session, onMyApps }: NavbarProps) {
               className="text-xs text-white/40 hover:text-white/70 underline underline-offset-2 transition-colors"
             >
               로그아웃
+            </button>
+            <button
+              type="button"
+              onClick={onMyApps}
+              className="flex items-center rounded-lg bg-white text-[#191600] font-semibold text-xs px-3 py-1.5"
+            >
+              내 신청 내역
             </button>
           </div>
         ) : (
