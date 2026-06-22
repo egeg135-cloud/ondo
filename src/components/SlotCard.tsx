@@ -16,21 +16,17 @@ export function SlotCard({ slot, onApply }: SlotCardProps) {
     : null
 
   return (
-    <div className="rounded-2xl bg-white border border-navy/10 p-4 flex items-center justify-between gap-3">
+    <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-4 flex items-center justify-between gap-3">
       <div className="min-w-0">
-        {/* 날짜 · 장소 + 뱃지 */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-navy">{formatDateLabel(slot.date)}</span>
-          {isFull ? (
-            <Badge className="bg-navy/10 text-navy/50">마감</Badge>
-          ) : isAlmostFull ? (
-            <Badge className="bg-amber-100 text-amber-700">마감임박</Badge>
+          <span className="font-bold text-gray-900 text-base">{formatDateLabel(slot.date)}</span>
+          {isAlmostFull && !isFull ? (
+            <Badge className="bg-gray-200 text-gray-700">마감임박</Badge>
           ) : null}
         </div>
 
-        {/* 인원 + 메타 */}
-        <div className="mt-1.5 text-sm text-navy/60 flex items-center gap-x-2 gap-y-1 flex-wrap">
-          <span className={isFull ? 'text-navy/40' : 'text-sand font-semibold'}>
+        <div className="mt-1.5 text-sm text-gray-500 flex items-center gap-x-2 gap-y-1 flex-wrap">
+          <span className={isFull ? 'text-gray-300' : 'text-gray-900 font-semibold'}>
             {count}/{slot.max_members}명
           </span>
           {paceText && <Dot label={paceText} />}
@@ -44,8 +40,8 @@ export function SlotCard({ slot, onApply }: SlotCardProps) {
         className={
           'shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold transition-colors ' +
           (isFull
-            ? 'bg-navy/10 text-navy/40 cursor-not-allowed'
-            : 'bg-navy text-white active:scale-[0.98]')
+            ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+            : 'bg-gray-900 text-white active:scale-[0.98]')
         }
       >
         {isFull ? '마감' : '신청'}
@@ -64,7 +60,7 @@ function Badge({ children, className }: { children: React.ReactNode; className: 
 
 function Dot({ label }: { label: string }) {
   return (
-    <span className="flex items-center gap-2 before:content-['·'] before:text-navy/30">
+    <span className="flex items-center gap-2 before:content-['·'] before:text-gray-300">
       {label}
     </span>
   )

@@ -8,6 +8,10 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    @apply bg-offwhite text-navy font-sans;
+    background-color: #FFFFFF;
+    color: #111827;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    @apply font-sans;
   }
 }

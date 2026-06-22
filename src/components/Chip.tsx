@@ -1,4 +1,3 @@
-// ───────────────────────── 선택 칩 (탭하듯 고르는 버튼) ─────────────────────────
 interface ChipProps {
   selected: boolean
   onClick: () => void
@@ -15,8 +14,8 @@ export function Chip({ selected, onClick, children, className = '' }: ChipProps)
       className={
         'rounded-full px-4 py-2.5 text-sm font-medium border transition-colors ' +
         (selected
-          ? 'bg-navy text-white border-navy '
-          : 'bg-white text-navy/80 border-navy/15 hover:border-navy/40 ') +
+          ? 'bg-gray-900 text-white border-gray-900 '
+          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 ') +
         className
       }
     >

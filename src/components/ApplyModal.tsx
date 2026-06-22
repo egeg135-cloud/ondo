@@ -27,7 +27,6 @@ export interface ApplySuccessInfo {
 interface ApplyModalProps {
   open: boolean
   onClose: () => void
-  /** 슬롯 카드에서 열었을 때만 전달. 없으면 "일반 신청" 모드. */
   slot?: Slot | null
   onSuccess: (info: ApplySuccessInfo) => void
 }
@@ -35,7 +34,6 @@ interface ApplyModalProps {
 export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) {
   const isSlotMode = Boolean(slot)
 
-  // ── 폼 상태 ──
   const [pace, setPace] = useState<Pace | null>(null)
   const [placesWeekday, setPlacesWeekday] = useState<Place[]>([])
   const [placesWeekend, setPlacesWeekend] = useState<Place[]>([])
@@ -49,7 +47,6 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
   const [error, setError] = useState('')
   const [loadedProfile, setLoadedProfile] = useState(false)
 
-  // 모달 열릴 때: 로그인한 본인 프로필 자동 채움
   useEffect(() => {
     if (open) {
       setError('')
@@ -59,7 +56,6 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // 로그인 유저의 기존 프로필 자동 불러오기
   async function loadMyProfile() {
     const user = await getMyProfile()
     if (user) {
@@ -79,7 +75,6 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
     setPlacesWeekend((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]))
   }
 
-  // 선택한 날짜 중 평일/주말 포함 여부
   const hasWeekday = dates.some((iso) => !isWeekendISO(iso))
   const hasWeekend = dates.some((iso) => isWeekendISO(iso))
 
@@ -137,28 +132,27 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
     setGender(null)
     setAgeRange(null)
     setName('')
-    // phone 은 유지 (다음 신청 편의)
   }
 
   if (!open) return null
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-navy/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-md bg-offwhite rounded-t-3xl sm:rounded-3xl max-h-[92vh] overflow-y-auto shadow-2xl"
+        className="w-full sm:max-w-md bg-white border border-gray-200 rounded-t-3xl sm:rounded-3xl max-h-[92vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="sticky top-0 bg-offwhite/95 backdrop-blur px-5 pt-5 pb-3 flex items-start justify-between">
+        <div className="sticky top-0 bg-white/95 backdrop-blur px-5 pt-5 pb-3 flex items-start justify-between border-b border-gray-100">
           <div>
-            <h2 className="text-lg font-bold text-navy">
+            <h2 className="text-xl font-bold text-gray-900">
               {isSlotMode ? '이 모임에 신청하기' : '5초 만에 신청하기'}
             </h2>
             {isSlotMode && slot && (
-              <p className="text-sm text-navy/60 mt-0.5">
+              <p className="text-sm text-gray-500 mt-0.5">
                 {formatDateLabel(slot.date)} · {slot.place}
                 {slot.pace_label ? ` · 페이스 ${slot.pace_label}` : ''}
               </p>
@@ -168,15 +162,15 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
             type="button"
             onClick={onClose}
             aria-label="닫기"
-            className="text-navy/40 hover:text-navy text-xl leading-none px-2 py-1"
+            className="text-gray-400 hover:text-gray-900 text-xl leading-none px-2 py-1"
           >
             ✕
           </button>
         </div>
 
-        <div className="px-5 pb-5 space-y-5">
+        <div className="px-5 pb-5 space-y-5 pt-4">
           {loadedProfile && (
-            <p className="text-xs text-sand bg-sand/10 rounded-lg px-3 py-2">
+            <p className="text-xs text-gray-700 bg-gray-100 rounded-lg px-3 py-2">
               이전에 입력하신 정보를 불러왔어요. 바꿔도 됩니다.
             </p>
           )}
@@ -191,26 +185,24 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
               ))}
             </div>
             {pace && (
-              <div className="mt-2 rounded-xl bg-navy/5 px-3 py-2.5">
-                <p className="text-sm text-navy/80 font-medium">{PACE_DESC[pace]}</p>
-                <p className="text-xs text-navy/40 mt-0.5">* 페이스 = 1km당 달리는 시간 (분/km)</p>
+              <div className="mt-2 rounded-xl bg-gray-50 border border-gray-200 px-3 py-2.5">
+                <p className="text-sm text-gray-700 font-medium">{PACE_DESC[pace]}</p>
+                <p className="text-xs text-gray-400 mt-0.5">* 페이스 = 1km당 달리는 시간 (분/km)</p>
               </div>
             )}
           </Field>
 
-          {/* 일반 신청일 때만: 희망 날짜(달력) → 평일/주말 희망 장소 */}
           {!isSlotMode && (
             <>
               <Field label="희망 날짜" hint="요일 탭·드래그로 여러 날 선택">
                 <Calendar selected={dates} onChange={setDates} monthsAhead={1} />
                 {dates.length > 0 && (
-                  <p className="text-xs text-navy/60 mt-2">
+                  <p className="text-xs text-gray-500 mt-2">
                     선택 {dates.length}일: {dates.slice().sort().map(formatDateLabel).join(', ')}
                   </p>
                 )}
               </Field>
 
-              {/* 고른 날짜에 평일이 있으면 평일 장소, 주말이 있으면 주말 장소를 받는다 */}
               {hasWeekday && (
                 <Field label="평일 희망 장소" hint="평일 활동지역 (여러 곳 가능)">
                   <div className="flex flex-wrap gap-2">
@@ -273,7 +265,7 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="홍길동"
-              className="w-full rounded-xl border border-navy/15 bg-white px-4 py-3 text-navy placeholder:text-navy/30 focus:outline-none focus:border-navy/50"
+              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-500"
             />
           </Field>
 
@@ -285,7 +277,7 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
               value={phone}
               onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
               placeholder="010-1234-5678"
-              className="w-full rounded-xl border border-navy/15 bg-white px-4 py-3 text-navy placeholder:text-navy/30 focus:outline-none focus:border-navy/50"
+              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-500"
             />
           </Field>
 
@@ -297,12 +289,12 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full rounded-2xl bg-navy text-white font-bold py-4 text-base disabled:opacity-50 active:scale-[0.99] transition-transform"
+            className="w-full rounded-2xl bg-gray-900 text-white font-bold py-4 text-base disabled:opacity-40 active:scale-[0.99] transition-transform"
           >
             {submitting ? '신청 중…' : '신청 완료하기'}
           </button>
 
-          <p className="text-[11px] leading-relaxed text-navy/40 text-center">
+          <p className="text-xs leading-relaxed text-gray-400 text-center">
             첫 참여는 무료예요 · 재참여부터 회당 4,900원 (월 멤버십 9,900원 예정)
           </p>
         </div>
@@ -311,7 +303,6 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
   )
 }
 
-// ───────────────────────── 폼 필드 래퍼 ─────────────────────────
 function Field({
   label,
   hint,
@@ -324,8 +315,8 @@ function Field({
   return (
     <div>
       <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-sm font-semibold text-navy">{label}</span>
-        {hint && <span className="text-xs text-navy/40">{hint}</span>}
+        <span className="text-sm font-semibold text-gray-900">{label}</span>
+        {hint && <span className="text-xs text-gray-400">{hint}</span>}
       </div>
       {children}
     </div>

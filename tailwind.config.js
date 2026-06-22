@@ -4,10 +4,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        // ONDO 브랜드 컬러 (밝고 고급스러운 Quiet Luxury 톤)
-        navy: '#1C3A5C', // 딥네이비 — 메인 텍스트/CTA
-        sand: '#C9A87C', // 웜샌드 — 포인트
-        offwhite: '#F5F0EB', // 오프화이트 — 배경
+        charcoal: '#FFFFFF',  // main bg / text-on-black-buttons
+        surface: '#F9FAFB',   // elevated surface — gray-50
+        muted: '#6B7280',     // secondary text — gray-500
+        cream: '#111827',     // primary text — gray-900
+        navy: '#111827',      // same as cream (light-bg contexts)
+        offwhite: '#F9FAFB',  // modal bg — gray-50
+        sand: '#111827',      // CTA bg → black, text → near-black
       },
       fontFamily: {
         sans: [
