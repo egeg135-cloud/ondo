@@ -8,7 +8,6 @@ import { formatPhoneInput, isValidPhone, saveLastPhone } from '../lib/format'
 import { FriendlyError, getMyProfile, submitApplication } from '../lib/api'
 
 const PLACES: Place[] = ['여의도', '반포']
-const AGE_RANGES = ['20대', '30대 초', '30대 중', '30대 후', '40대+']
 const GENDERS: Gender[] = ['남', '여']
 
 export interface ApplySuccessInfo {
@@ -81,7 +80,7 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
         return '주말 날짜를 고르셨어요. 주말 희망 장소를 골라 주세요.'
     }
     if (!gender) return '성별을 선택해 주세요.'
-    if (!ageRange) return '나이대를 선택해 주세요.'
+    if (!ageRange || !/^\d{1,2}$/.test(ageRange.trim())) return '나이를 숫자(만 나이)로 입력해 주세요.'
     if (!name.trim()) return '이름을 입력해 주세요.'
     if (!isValidPhone(phone)) return '연락처를 010-1234-5678 형태로 입력해 주세요.'
     return null
@@ -169,7 +168,7 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
           )}
 
           {/* 러닝 페이스 — 6:30 / 7:30 두 그룹만 */}
-          <Field label="러닝 페이스" hint="내 페이스(1km당 분:초)에 맞는 그룹을 골라주세요">
+          <Field label="러닝 페이스" hint="정확히 안 맞아도 둘 중 더 가까운 쪽으로 골라주세요">
             <div className="grid grid-cols-2 gap-2">
               {PACE_PICK.map((opt) => (
                 <Chip
@@ -250,15 +249,19 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
             </div>
           </Field>
 
-          {/* 나이대 */}
-          <Field label="나이대">
-            <div className="flex flex-wrap gap-2">
-              {AGE_RANGES.map((a) => (
-                <Chip key={a} selected={ageRange === a} onClick={() => setAgeRange(a)}>
-                  {a}
-                </Chip>
-              ))}
-            </div>
+          {/* 나이 (만나이) */}
+          <Field label="나이" hint="만 나이로 입력해 주세요">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={14}
+              max={99}
+              value={ageRange ?? ''}
+              onChange={(e) => setAgeRange(e.target.value)}
+              placeholder="예: 29"
+              className="w-32 rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-500"
+            />
+            <span className="ml-2 text-sm text-gray-500">세</span>
           </Field>
 
           {/* 이름 */}
