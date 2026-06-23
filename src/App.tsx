@@ -93,6 +93,17 @@ function App() {
         {/* 콘텐츠 */}
         <div className="relative z-10 w-full px-4 pb-10 pt-14">
           <p className="ml-1 text-xs tracking-[0.5em] text-white/60 font-extralight uppercase">ONDO</p>
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            <span className="rounded-full bg-black text-white text-xs font-semibold px-3 py-1.5 border border-white/15">
+              3~5명 소그룹
+            </span>
+            <span className="rounded-full bg-black text-white text-xs font-semibold px-3 py-1.5 border border-white/15">
+              부담 없이
+            </span>
+            <span className="rounded-full bg-black text-white text-xs font-semibold px-3 py-1.5 border border-white/15">
+              페이스 정밀 매칭
+            </span>
+          </div>
           <h1 className="mt-4 text-3xl font-bold text-white leading-snug">
             큰 러닝크루는 부담되지만,
             <br />

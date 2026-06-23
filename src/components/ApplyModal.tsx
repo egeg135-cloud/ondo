@@ -197,6 +197,9 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
           {!isSlotMode && (
             <>
               <Field label="희망 날짜" hint="요일 탭·드래그로 여러 날 선택">
+                <p className="mb-2 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg px-3 py-2">
+                  ⏰ 모든 모임은 <span className="font-bold">저녁 8시 (20:00)</span> 시작이에요.
+                </p>
                 <Calendar selected={dates} onChange={setDates} monthsAhead={1} allowedWeekdays={[4, 6]} />
                 {dates.length > 0 && (
                   <p className="text-xs text-gray-500 mt-2">
