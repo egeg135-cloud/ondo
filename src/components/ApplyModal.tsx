@@ -1,20 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Chip } from './Chip'
 import { Calendar } from './Calendar'
-import { PACE_DESC } from '../types'
+import { PACE_PICK, paceText } from '../types'
 import type { Gender, Pace, Place, Slot } from '../types'
 import { formatDateLabel, isWeekendISO } from '../lib/dates'
 import { formatPhoneInput, isValidPhone, saveLastPhone } from '../lib/format'
 import { FriendlyError, getMyProfile, submitApplication } from '../lib/api'
 
-const PACES: Pace[] = ['A', 'B', 'C', 'D']
-const PACE_SHORT: Record<Pace, string> = {
-  A: '걷기',
-  B: '조깅 (7~8분)',
-  C: '러닝 (6~7분)',
-  D: '빠른 러닝 (5~6분)',
-}
-const PLACES: Place[] = ['여의도', '반포', '종로']
+const PLACES: Place[] = ['여의도', '반포']
 const AGE_RANGES = ['20대', '30대 초', '30대 중', '30대 후', '40대+']
 const GENDERS: Gender[] = ['남', '여']
 
@@ -154,7 +147,7 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
             {isSlotMode && slot && (
               <p className="text-sm text-gray-500 mt-0.5">
                 {formatDateLabel(slot.date)} · {slot.place}
-                {slot.pace_label ? ` · 페이스 ${slot.pace_label}` : ''}
+                {slot.pace_label ? ` · ${paceText(slot.pace_label)} 페이스` : ''}
               </p>
             )}
           </div>
@@ -175,19 +168,29 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
             </p>
           )}
 
-          {/* 러닝 페이스 */}
-          <Field label="러닝 페이스">
+          {/* 러닝 페이스 — 6:30 / 7:30 두 그룹만 */}
+          <Field label="러닝 페이스" hint="내 페이스(1km당 분:초)에 맞는 그룹을 골라주세요">
             <div className="grid grid-cols-2 gap-2">
-              {PACES.map((p) => (
-                <Chip key={p} selected={pace === p} onClick={() => setPace(p)} className="!py-3 justify-center">
-                  <span className="font-bold">{p}</span> {PACE_SHORT[p]}
+              {PACE_PICK.map((opt) => (
+                <Chip
+                  key={opt.code}
+                  selected={pace === opt.code}
+                  onClick={() => setPace(opt.code)}
+                  className="!py-3 justify-center"
+                >
+                  <span className="font-bold text-base">{opt.label}</span>
+                  <span className="text-xs opacity-70"> /km</span>
                 </Chip>
               ))}
             </div>
             {pace && (
               <div className="mt-2 rounded-xl bg-gray-50 border border-gray-200 px-3 py-2.5">
-                <p className="text-sm text-gray-700 font-medium">{PACE_DESC[pace]}</p>
-                <p className="text-xs text-gray-400 mt-0.5">* 페이스 = 1km당 달리는 시간 (분/km)</p>
+                <p className="text-sm text-gray-700 font-medium">
+                  {PACE_PICK.find((o) => o.code === pace)?.desc}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  * 페이스 = 1km를 달리는 시간. 숫자가 작을수록 빠릅니다.
+                </p>
               </div>
             )}
           </Field>
@@ -195,7 +198,7 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
           {!isSlotMode && (
             <>
               <Field label="희망 날짜" hint="요일 탭·드래그로 여러 날 선택">
-                <Calendar selected={dates} onChange={setDates} monthsAhead={1} />
+                <Calendar selected={dates} onChange={setDates} monthsAhead={1} allowedWeekdays={[4, 6]} />
                 {dates.length > 0 && (
                   <p className="text-xs text-gray-500 mt-2">
                     선택 {dates.length}일: {dates.slice().sort().map(formatDateLabel).join(', ')}

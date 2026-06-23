@@ -4,8 +4,8 @@ import { formatDateLabel } from './dates'
 
 const ACCOUNT = '카카오뱅크 3333-37-0096737 (김무관)'
 const DEPOSIT = '5,000원'
-const REJOIN_FEE = '4,900원'
-const MEET_TIME = '저녁 7시'
+const REJOIN_FEE = '5,000원'
+const MEET_TIME = '저녁 8시'
 
 /**
  * 매칭 안내 카톡 메시지 생성 (1인 1메시지).
@@ -26,7 +26,7 @@ export function buildNotice(opts: {
   return [
     `안녕하세요 ${name}님! ONDO 운영팀입니다 🙂`,
     ``,
-    `${formatDateLabel(date)} ${MEET_TIME} ${place}한강공원 모임에 매칭되어 안내드려요!`,
+    `${formatDateLabel(date)} ${MEET_TIME} ${place}한강공원 5km 모임에 매칭되어 안내드려요!`,
     `${feeLine}`,
     `노쇼 방지 보증금 ${DEPOSIT}만 입금 확인되면 그룹방으로 초대드릴게요.`,
     `${ACCOUNT}`,

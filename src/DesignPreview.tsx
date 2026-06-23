@@ -25,8 +25,8 @@ const DUMMY_SLOTS: SlotWithStats[] = [
     stats: { count: 5, female: 3, male: 2, ageLabel: null, isFull: true, isAlmostFull: false },
   },
   {
-    id: 's4', date: '2026-06-30', place: '종로', max_members: 5,
-    pace_label: 'D', status: 'open', created_at: '',
+    id: 's4', date: '2026-06-30', place: '반포', max_members: 5,
+    pace_label: 'C', status: 'open', created_at: '',
     stats: { count: 1, female: 0, male: 1, ageLabel: null, isFull: false, isAlmostFull: false },
   },
 ]
@@ -52,7 +52,7 @@ const DUMMY_APPS: Array<{
     id: 'a2', status: 'applied', created_at: '2026-06-18T09:00:00Z',
     slot: null,
     wish_places_weekday: ['반포', '여의도'],
-    wish_places_weekend: ['종로'],
+    wish_places_weekend: ['반포'],
     wish_dates: ['2026-06-27', '2026-06-28', '2026-07-04'],
   },
   {
@@ -68,7 +68,7 @@ const STATUS_STYLE: Record<ApplicationStatus, { label: string; cls: string }> = 
   cancelled: { label: '취소됨',   cls: 'bg-gray-100 text-gray-400' },
 }
 
-const PLACE_ORDER = ['여의도', '반포', '종로']
+const PLACE_ORDER = ['여의도', '반포']
 
 export default function DesignPreview() {
   const [applyOpen, setApplyOpen] = useState(false)

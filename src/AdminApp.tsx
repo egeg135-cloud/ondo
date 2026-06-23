@@ -9,10 +9,10 @@ import {
 } from './lib/api'
 import { formatDateLabel } from './lib/dates'
 import { buildNotice } from './lib/notice'
-import { PACE_ORDER } from './types'
-import type { Pace, Place, Slot } from './types'
+import { paceText } from './types'
+import type { Place, Slot } from './types'
 
-const PLACES: Place[] = ['여의도', '반포', '종로']
+const PLACES: Place[] = ['여의도', '반포']
 
 function getKeyFromUrl(): string {
   return new URLSearchParams(window.location.search).get('key') ?? ''
@@ -38,7 +38,7 @@ function exportApplicantsCsv(apps: AdminApplication[]) {
   const rows = apps.map((a) => [
     a.user_name,
     a.user_phone,
-    a.user_pace ?? '',
+    paceText(a.user_pace),
     a.user_gender ?? '',
     a.user_age_range ?? '',
     a.user_total_count > 0 || a.prior_participations > 0
@@ -307,17 +307,14 @@ function SlotCreateForm({ adminKey, onCreated }: { adminKey: string; onCreated: 
           />
         </label>
         <label className="text-xs text-navy/60">
-          페이스 라벨
+          페이스 그룹
           <select
             value={paceLabel}
             onChange={(e) => setPaceLabel(e.target.value)}
             className="mt-1 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy text-sm bg-white"
           >
-            {(['A', 'B', 'C', 'D'] as const).map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
+            <option value="C">6:30 /km</option>
+            <option value="B">7:30 /km</option>
           </select>
         </label>
       </div>
@@ -394,7 +391,7 @@ function SlotAssign({
           disabled={busy}
           className="w-full rounded-lg bg-sand/20 text-navy text-xs font-semibold px-3 py-2 text-left disabled:opacity-40 hover:bg-sand/30"
         >
-          ⭐ 추천 배정: {formatDateLabel(rec.date)} · {rec.place} · 페이스 {rec.pace_label ?? '?'}
+          ⭐ 추천 배정: {formatDateLabel(rec.date)} · {rec.place} · {paceText(rec.pace_label)} 페이스
         </button>
       )}
       {/* 수동 선택 */}
@@ -407,7 +404,7 @@ function SlotAssign({
           <option value="">직접 슬롯 선택…</option>
           {openSlots.map((s) => (
             <option key={s.id} value={s.id}>
-              {formatDateLabel(s.date)} · {s.place} · 페이스 {s.pace_label ?? '?'}
+              {formatDateLabel(s.date)} · {s.place} · {paceText(s.pace_label)} 페이스
             </option>
           ))}
         </select>
@@ -442,7 +439,7 @@ function SlotGroupCard({
       <div className="flex items-center justify-between">
         <p className="font-bold text-navy">
           {group.date ? formatDateLabel(group.date) : '?'} · {group.place}
-          {group.paceLabel ? ` · 페이스 ${group.paceLabel}` : ''}
+          {group.paceLabel ? ` · ${paceText(group.paceLabel)} 페이스` : ''}
         </p>
         <span className="text-sm text-sand font-semibold">
           {group.apps.length}/{group.max ?? 5}명
@@ -576,7 +573,7 @@ function ApplicantRow({
           {isConfirmed && <Tag className="bg-navy text-white">확정</Tag>}
         </div>
         <p className="text-xs text-navy/55 mt-0.5">
-          페이스 {a.user_pace ?? '?'} · {a.user_gender ?? '?'} · {a.user_age_range ?? '?'}
+          {paceText(a.user_pace)} 페이스 · {a.user_gender ?? '?'} · {a.user_age_range ?? '?'}
         </p>
       </div>
       <div className="shrink-0 flex items-center gap-1.5">
@@ -641,12 +638,9 @@ function computeWarnings(g: SlotGroup): string[] {
   const females = g.apps.filter((a) => a.user_gender === '여').length
   if (females === 1 && n > 1) w.push('여성 1명 단독')
 
-  const paces = g.apps
-    .map((a) => a.user_pace)
-    .filter((p): p is Pace => !!p)
-    .map((p) => PACE_ORDER[p])
-  if (paces.length >= 2 && Math.max(...paces) - Math.min(...paces) >= 2) {
-    w.push('페이스 2단계 이상 차이')
-  }
+  // 6:30 / 7:30 은 섞지 않는다 — 한 슬롯에 서로 다른 페이스가 있으면 경고
+  const distinctPaces = new Set(g.apps.map((a) => a.user_pace).filter(Boolean))
+  if (distinctPaces.size > 1) w.push('페이스 섞임 (6:30/7:30)')
+
   return w
 }

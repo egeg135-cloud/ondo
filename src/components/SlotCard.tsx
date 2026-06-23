@@ -1,7 +1,6 @@
 import type { SlotWithStats } from '../lib/api'
 import { formatDateLabel } from '../lib/dates'
-import { PACE_SLOT_LABEL } from '../types'
-import type { Pace } from '../types'
+import { paceText } from '../types'
 
 interface SlotCardProps {
   slot: SlotWithStats
@@ -11,9 +10,7 @@ interface SlotCardProps {
 export function SlotCard({ slot, onApply }: SlotCardProps) {
   const { stats } = slot
   const { count, isFull, isAlmostFull } = stats
-  const paceText = slot.pace_label
-    ? (PACE_SLOT_LABEL[slot.pace_label as Pace] ?? `페이스 ${slot.pace_label}`)
-    : null
+  const paceLabel = slot.pace_label ? `${paceText(slot.pace_label)} 페이스` : null
 
   return (
     <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-4 flex items-center justify-between gap-3">
@@ -29,7 +26,7 @@ export function SlotCard({ slot, onApply }: SlotCardProps) {
           <span className={isFull ? 'text-gray-300' : 'text-gray-900 font-semibold'}>
             {count}/{slot.max_members}명
           </span>
-          {paceText && <Dot label={paceText} />}
+          {paceLabel && <Dot label={paceLabel} />}
         </div>
       </div>
 

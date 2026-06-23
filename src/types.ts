@@ -2,7 +2,7 @@
 
 export type Gender = '남' | '여'
 export type Pace = 'A' | 'B' | 'C' | 'D'
-export type Place = '반포' | '여의도' | '종로'
+export type Place = '반포' | '여의도'
 export type SlotStatus = 'open' | 'closed' | 'confirmed'
 export type ApplicationStatus = 'applied' | 'confirmed' | 'cancelled'
 
@@ -42,29 +42,33 @@ export interface Application {
   created_at: string
 }
 
-// ───────────────────────── 페이스 기준 (UI 표기용) ─────────────────────────
+// ───────────────────────── 페이스 기준 (파일럿: 6:30 / 7:30 두 그룹만) ─────────────────────────
+// 페이스 = 1km당 분:초. DB(users.pace)는 A~D 제약이라 코드로 저장하고 표시만 숫자로.
+//   6:30 → 'C' ,  7:30 → 'B'  (7:30 이 하한선)
+export const PACE_PICK: { code: Pace; label: string; desc: string }[] = [
+  { code: 'C', label: '6:30', desc: '1km를 6분 30초 페이스로 — 이미 꾸준히 뛰는 분' },
+  { code: 'B', label: '7:30', desc: '1km를 7분 30초 페이스로 — 가볍게 완주 가능한 분' },
+]
 
-// 페이스 = 1km를 달리는 데 걸리는 시간 (분/km). 숫자가 작을수록 빠름.
-export const PACE_DESC: Record<Pace, string> = {
-  A: '1km를 9분 이상, 걷듯이 천천히',
-  B: '1km를 7~8분 페이스로 — 대화하며 뛸 수 있는 가벼운 속도',
-  C: '1km를 6~7분 페이스로 꾸준히',
-  D: '1km를 5~6분 페이스로 빠르게',
+const PACE_NUM: Record<string, string> = {
+  C: '6:30',
+  B: '7:30',
+  '6:30': '6:30',
+  '7:30': '7:30',
+  A: '걷기',
+  D: '빠른 러닝',
 }
 
-// 슬롯 카드 등 노출용 — 페이스를 직관적으로 풀어쓴 라벨 (분/km 구간 포함)
-export const PACE_SLOT_LABEL: Record<Pace, string> = {
-  A: '걷듯 천천히 · 8~9분/km',
-  B: '가벼운 조깅 · 7~8분/km',
-  C: '꾸준한 러닝 · 6~7분/km',
-  D: '빠른 러닝 · 5~6분/km',
+/** 페이스 코드/라벨 → 표시용 숫자 라벨 (예: 'C' → '6:30'). 모르는 값은 그대로. */
+export function paceText(p: string | null | undefined): string {
+  if (!p) return ''
+  return PACE_NUM[p] ?? p
 }
 
 export const PACE_ORDER: Record<Pace, number> = { A: 0, B: 1, C: 2, D: 3 }
 
-// 장소별 집합지 안내
+// 장소별 집합지 안내 (파일럿: 여의도 · 반포 두 거점)
 export const PLACE_INFO: Record<Place, { point: string; map: string }> = {
   반포: { point: '반포한강공원 세빛섬 입구 앞', map: 'https://naver.me/G9UKjVxG' },
-  종로: { point: '종각역 4번 출구 보신각 앞', map: 'https://naver.me/GDQU9jkJ' },
   여의도: { point: '여의나루역 2번 출구 앞', map: '' },
 }

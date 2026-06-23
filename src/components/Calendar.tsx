@@ -8,6 +8,8 @@ interface CalendarProps {
   onChange: (next: string[]) => void
   /** 현재 달 기준 앞으로 몇 달까지 이동 허용 (0=이번 달만, 1=다음 달까지) */
   monthsAhead?: number
+  /** 선택 가능한 요일 (0=일 … 6=토). 미지정이면 전체 허용 */
+  allowedWeekdays?: number[]
 }
 
 /**
@@ -17,7 +19,9 @@ interface CalendarProps {
  * - 요일 헤더(일~토) 탭 → 그 달의 해당 요일 전체 토글
  * - 날짜 위를 드래그하면 연속 선택/해제
  */
-export function Calendar({ selected, onChange, monthsAhead = 1 }: CalendarProps) {
+export function Calendar({ selected, onChange, monthsAhead = 1, allowedWeekdays }: CalendarProps) {
+  const isAllowedDow = (dow: number) => !allowedWeekdays || allowedWeekdays.includes(dow)
+
   const today = new Date()
   const todayIso = toISODate(today)
   const curIndex = today.getFullYear() * 12 + today.getMonth()
@@ -65,6 +69,7 @@ export function Calendar({ selected, onChange, monthsAhead = 1 }: CalendarProps)
 
   // ── 요일 헤더 탭: 그 달의 해당 요일(선택 가능한 날) 전체 토글 ──
   function toggleWeekday(dow: number) {
+    if (!isAllowedDow(dow)) return
     const isos: string[] = []
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d)
@@ -109,20 +114,27 @@ export function Calendar({ selected, onChange, monthsAhead = 1 }: CalendarProps)
 
       {/* 요일 헤더 (탭하면 그 요일 전체 토글) */}
       <div className="grid grid-cols-7 mb-1">
-        {WEEKDAYS.map((w, i) => (
-          <button
-            key={w}
-            type="button"
-            onClick={() => toggleWeekday(i)}
-            title={`${w}요일 전체 선택/해제`}
-            className={
-              'text-center text-xs font-semibold py-1 rounded-md hover:bg-navy/5 transition-colors ' +
-              (i === 0 ? 'text-rose-400' : i === 6 ? 'text-blue-400' : 'text-navy/50')
-            }
-          >
-            {w}
-          </button>
-        ))}
+        {WEEKDAYS.map((w, i) => {
+          const allowed = isAllowedDow(i)
+          return (
+            <button
+              key={w}
+              type="button"
+              onClick={() => toggleWeekday(i)}
+              disabled={!allowed}
+              title={allowed ? `${w}요일 전체 선택/해제` : undefined}
+              className={
+                'text-center text-xs font-semibold py-1 rounded-md transition-colors ' +
+                (!allowed
+                  ? 'text-navy/15 cursor-not-allowed'
+                  : 'hover:bg-navy/5 ' +
+                    (i === 0 ? 'text-rose-400' : i === 6 ? 'text-blue-400' : 'text-navy/50'))
+              }
+            >
+              {w}
+            </button>
+          )
+        })}
       </div>
 
       {/* 날짜 그리드 (드래그 선택 가능) */}
@@ -132,6 +144,8 @@ export function Calendar({ selected, onChange, monthsAhead = 1 }: CalendarProps)
           const iso = toISODate(new Date(year, month, d))
           const dow = (firstDayOffset + d - 1) % 7
           const isPast = iso < todayIso
+          const isBlocked = !isAllowedDow(dow) // 운영 요일(목·토)이 아니면 막음
+          const isDisabled = isPast || isBlocked
           const isToday = iso === todayIso
           const isSelected = selected.includes(iso)
 
@@ -139,18 +153,20 @@ export function Calendar({ selected, onChange, monthsAhead = 1 }: CalendarProps)
             <button
               key={iso}
               type="button"
-              disabled={isPast}
+              disabled={isDisabled}
               aria-pressed={isSelected}
-              onPointerDown={() => !isPast && startDrag(iso)}
-              onPointerEnter={() => !isPast && dragOver(iso)}
+              onPointerDown={() => !isDisabled && startDrag(iso)}
+              onPointerEnter={() => !isDisabled && dragOver(iso)}
               className={
                 'aspect-square rounded-lg text-sm flex items-center justify-center transition-colors ' +
                 (isPast
                   ? 'text-navy/20 line-through cursor-not-allowed'
-                  : isSelected
-                    ? 'bg-navy text-white font-bold'
-                    : (dow === 0 ? 'text-rose-500 ' : dow === 6 ? 'text-blue-500 ' : 'text-navy ') +
-                      'hover:bg-navy/5') +
+                  : isBlocked
+                    ? 'text-navy/15 cursor-not-allowed'
+                    : isSelected
+                      ? 'bg-navy text-white font-bold'
+                      : (dow === 0 ? 'text-rose-500 ' : dow === 6 ? 'text-blue-500 ' : 'text-navy ') +
+                        'hover:bg-navy/5') +
                 (isToday && !isSelected ? ' ring-1 ring-sand' : '')
               }
             >
@@ -161,7 +177,9 @@ export function Calendar({ selected, onChange, monthsAhead = 1 }: CalendarProps)
       </div>
 
       <p className="text-[11px] text-navy/40 mt-2 text-center">
-        요일(일~토)을 누르면 그 요일 전체 선택 · 날짜 위를 드래그해도 돼요
+        {allowedWeekdays
+          ? '모임은 목요일·토요일 저녁에 열려요. 요일 헤더를 누르면 한 번에 선택돼요'
+          : '요일(일~토)을 누르면 그 요일 전체 선택 · 날짜 위를 드래그해도 돼요'}
       </p>
     </div>
   )

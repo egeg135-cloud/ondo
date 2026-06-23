@@ -14,7 +14,7 @@ import {
 import { subscribeToApplications } from './lib/realtime'
 import type { Place, Slot } from './types'
 
-const PLACE_ORDER: Place[] = ['여의도', '반포', '종로']
+const PLACE_ORDER: Place[] = ['여의도', '반포']
 
 // 랜딩 카운터 표시용 베이스라인 (실제 DB 신청 수에 더해서 보여줌 — 운영자/엑셀엔 영향 없음).
 // 초기 휑함 방지용. 0 으로 두면 실제 숫자만 표시.

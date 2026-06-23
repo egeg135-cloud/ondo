@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatDateLabel } from '../lib/dates'
 import { cancelApplication, getMyApplications, type MyApplication } from '../lib/api'
 import { signInWithKakao, useSession } from '../lib/auth'
+import { paceText } from '../types'
 import type { ApplicationStatus } from '../types'
 
 interface MyApplicationsModalProps {
@@ -151,7 +152,7 @@ function ApplicationItem({
           {app.slot ? (
             <p className="font-bold text-gray-900">
               {formatDateLabel(app.slot.date)} · {app.slot.place}
-              {app.slot.pace_label ? ` · 페이스 ${app.slot.pace_label}` : ''}
+              {app.slot.pace_label ? ` · ${paceText(app.slot.pace_label)} 페이스` : ''}
             </p>
           ) : (
             <p className="font-bold text-gray-900">희망 신청</p>
