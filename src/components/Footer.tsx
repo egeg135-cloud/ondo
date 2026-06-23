@@ -12,6 +12,13 @@ export function Footer() {
           </p>
         </div>
 
+        {/* 사업자 정보 */}
+        <div className="text-xs text-white/40 leading-relaxed">
+          <p className="text-white/60 font-semibold">모티피플</p>
+          <p className="mt-1">사업자 등록번호: 783-34-01846 ㅣ 대표: 김무관</p>
+          <p>주소: 서울 노원구 동일로174길 27</p>
+        </div>
+
         {/* 약관 · 정책 · 문의 */}
         <div className="flex flex-col gap-2 text-sm">
           <a
