@@ -1,3 +1,5 @@
+import { POLICY } from '../types'
+
 export function Footer() {
   return (
     <footer className="bg-black">
@@ -10,12 +12,35 @@ export function Footer() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2">
+        {/* 약관 · 정책 · 문의 */}
+        <div className="flex flex-col gap-2 text-sm">
+          <a
+            href={POLICY.terms}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white/50 hover:text-white transition-colors w-fit"
+          >
+            이용약관 및 안전·면책 고지
+          </a>
+          <a
+            href={POLICY.privacy}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white/50 hover:text-white transition-colors w-fit"
+          >
+            개인정보처리방침
+          </a>
+          <a
+            href={`mailto:${POLICY.email}`}
+            className="text-white/50 hover:text-white transition-colors w-fit"
+          >
+            {POLICY.email}
+          </a>
           <a
             href="https://instagram.com/ondo.pm"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 text-white/50 hover:text-white transition-colors w-fit"
           >
             <InstagramIcon />
             @ondo.pm

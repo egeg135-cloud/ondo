@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Chip } from './Chip'
 import { Calendar } from './Calendar'
-import { PACE_PICK, paceText } from '../types'
+import { PACE_PICK, paceText, POLICY } from '../types'
 import type { Gender, Pace, Place, Slot } from '../types'
 import { formatDateLabel, isWeekendISO } from '../lib/dates'
 import { formatPhoneInput, isValidPhone, saveLastPhone } from '../lib/format'
@@ -39,10 +39,20 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
   const [error, setError] = useState('')
   const [loadedProfile, setLoadedProfile] = useState(false)
 
+  // 동의
+  const [agreeTerms, setAgreeTerms] = useState(false)
+  const [agreePrivacy, setAgreePrivacy] = useState(false)
+  const [agreeMarketing, setAgreeMarketing] = useState(false)
+  const [askMarketing, setAskMarketing] = useState(false) // 마케팅 미동의 시 재확인 노출
+
   useEffect(() => {
     if (open) {
       setError('')
       setLoadedProfile(false)
+      setAgreeTerms(false)
+      setAgreePrivacy(false)
+      setAgreeMarketing(false)
+      setAskMarketing(false)
       void loadMyProfile()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,6 +66,7 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
       if (user.gender) setGender(user.gender)
       if (user.age_range) setAgeRange(user.age_range)
       if (user.pace) setPace(user.pace)
+      if (user.marketing_consent) setAgreeMarketing(true)
       setLoadedProfile(true)
     }
   }
@@ -83,16 +94,28 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
     if (!ageRange || !/^\d{1,2}$/.test(ageRange.trim())) return '나이를 숫자(만 나이)로 입력해 주세요.'
     if (!name.trim()) return '이름을 입력해 주세요.'
     if (!isValidPhone(phone)) return '연락처를 010-1234-5678 형태로 입력해 주세요.'
+    if (!agreeTerms) return '이용약관 및 안전 안내에 동의해 주세요.'
+    if (!agreePrivacy) return '개인정보 수집·이용에 동의해 주세요.'
     return null
   }
 
-  async function handleSubmit() {
+  // 제출 버튼 클릭: 검증 후, 마케팅 미동의면 한 번 더 물어본다
+  function handleSubmitClick() {
     const v = validate()
     if (v) {
       setError(v)
       return
     }
     setError('')
+    if (!agreeMarketing) {
+      setAskMarketing(true)
+      return
+    }
+    void doSubmit(agreeMarketing)
+  }
+
+  async function doSubmit(marketing: boolean) {
+    setAskMarketing(false)
     setSubmitting(true)
     try {
       const { applicationId } = await submitApplication({
@@ -105,6 +128,7 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
         wishPlacesWeekday: isSlotMode ? undefined : placesWeekday,
         wishPlacesWeekend: isSlotMode ? undefined : placesWeekend,
         wishDates: isSlotMode ? undefined : dates,
+        marketingConsent: marketing,
       })
       saveLastPhone(phone.trim())
       onSuccess({ applicationId, phone: phone.trim(), name: name.trim() })
@@ -124,6 +148,10 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
     setGender(null)
     setAgeRange(null)
     setName('')
+    setAgreeTerms(false)
+    setAgreePrivacy(false)
+    setAgreeMarketing(false)
+    setAskMarketing(false)
   }
 
   if (!open) return null
@@ -290,25 +318,103 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
             />
           </Field>
 
+          {/* 동의 */}
+          <div className="space-y-2 pt-1">
+            <Consent checked={agreeTerms} onChange={setAgreeTerms} required>
+              <a href={POLICY.terms} target="_blank" rel="noopener noreferrer" className="underline">
+                이용약관 및 안전 안내
+              </a>
+              에 동의합니다.
+            </Consent>
+            <Consent checked={agreePrivacy} onChange={setAgreePrivacy} required>
+              <a href={POLICY.privacy} target="_blank" rel="noopener noreferrer" className="underline">
+                개인정보 수집·이용
+              </a>
+              에 동의합니다.
+            </Consent>
+            <Consent checked={agreeMarketing} onChange={setAgreeMarketing}>
+              마케팅 및 재참여 안내 수신에 동의합니다.
+            </Consent>
+          </div>
+
           {error && (
             <p className="text-sm text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{error}</p>
           )}
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full rounded-2xl bg-gray-900 text-white font-bold py-4 text-base disabled:opacity-40 active:scale-[0.99] transition-transform"
-          >
-            {submitting ? '신청 중…' : '신청 완료하기'}
-          </button>
+          {/* 마케팅 미동의 재확인 */}
+          {askMarketing ? (
+            <div className="rounded-2xl bg-gray-50 border border-gray-200 p-4 space-y-3">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                딱 맞는 다음 모임·재참여 소식을 놓치지 않게 <span className="font-bold">안내받으시겠어요?</span>
+                <br />
+                <span className="text-xs text-gray-400">(언제든 수신 거부할 수 있어요)</span>
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgreeMarketing(true)
+                    void doSubmit(true)
+                  }}
+                  className="flex-1 rounded-xl bg-gray-900 text-white font-bold py-3 text-sm"
+                >
+                  네, 받을게요
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void doSubmit(false)}
+                  className="flex-1 rounded-xl bg-gray-200 text-gray-600 font-bold py-3 text-sm"
+                >
+                  괜찮아요
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSubmitClick}
+              disabled={submitting}
+              className="w-full rounded-2xl bg-gray-900 text-white font-bold py-4 text-base disabled:opacity-40 active:scale-[0.99] transition-transform"
+            >
+              {submitting ? '신청 중…' : '신청 완료하기'}
+            </button>
+          )}
 
           <p className="text-xs leading-relaxed text-gray-400 text-center">
-            첫 참여는 무료예요 · 재참여부터 회당 4,900원 (월 멤버십 9,900원 예정)
+            첫 참여는 무료예요 · 재참여부터 회당 5,000원
           </p>
         </div>
       </div>
     </div>
+  )
+}
+
+function Consent({
+  checked,
+  onChange,
+  required,
+  children,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <label className="flex items-start gap-2 cursor-pointer text-sm text-gray-600 leading-relaxed">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 w-4 h-4 shrink-0 accent-gray-900"
+      />
+      <span>
+        <span className={required ? 'text-gray-900 font-semibold' : 'text-gray-400'}>
+          [{required ? '필수' : '선택'}]
+        </span>{' '}
+        {children}
+      </span>
+    </label>
   )
 }
 

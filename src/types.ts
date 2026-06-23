@@ -15,7 +15,16 @@ export interface User {
   pace: Pace | null
   total_count: number
   no_show_count: number
+  marketing_consent?: boolean
   created_at: string
+}
+
+// 약관·개인정보·연락처 (푸터·신청폼 공용)
+export const POLICY = {
+  privacy: 'https://dorian-thunbergia-809.notion.site/ONDO-3887ea42434580138a6bce698008b09d',
+  terms:
+    'https://dorian-thunbergia-809.notion.site/ONDO-3757ea424345802eb105fcebe84595c1?source=copy_link',
+  email: 'motipeople.official@gmail.com',
 }
 
 export interface Slot {

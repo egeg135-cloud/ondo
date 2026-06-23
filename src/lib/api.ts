@@ -107,6 +107,7 @@ export interface ApplicationForm {
   wishPlacesWeekday?: Place[]
   wishPlacesWeekend?: Place[]
   wishDates?: string[]
+  marketingConsent?: boolean
 }
 
 /**
@@ -131,6 +132,7 @@ export async function submitApplication(
       gender: form.gender,
       age_range: form.ageRange,
       pace: form.pace,
+      marketing_consent: form.marketingConsent ?? false,
     },
     { onConflict: 'id' },
   )
