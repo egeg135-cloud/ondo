@@ -19,6 +19,26 @@ export interface User {
   created_at: string
 }
 
+// 러닝 목적 (v3.1)
+export const RUN_PURPOSES: { code: string; label: string }[] = [
+  { code: 'record', label: '기록 준비' },
+  { code: 'steady', label: '꾸준히 건강관리' },
+]
+
+// 이용권 (v3.1) — 회권/시즌권
+export const PLANS: { code: string; label: string; price: string; desc: string }[] = [
+  { code: 'single', label: '회권', price: '5,000원', desc: '1회 매칭' },
+  { code: 'season', label: '시즌권', price: '10,000원', desc: '4주 슬롯 풀 접근' },
+]
+
+export function planText(code: string | null | undefined): string {
+  const p = PLANS.find((x) => x.code === code)
+  return p ? `${p.label}(${p.price})` : (code ?? '')
+}
+export function purposeText(code: string | null | undefined): string {
+  return RUN_PURPOSES.find((x) => x.code === code)?.label ?? code ?? ''
+}
+
 // 약관·개인정보·연락처 (푸터·신청폼 공용)
 export const POLICY = {
   privacy: 'https://dorian-thunbergia-809.notion.site/ONDO-3887ea42434580138a6bce698008b09d',

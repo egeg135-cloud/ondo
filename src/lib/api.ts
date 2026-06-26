@@ -108,6 +108,11 @@ export interface ApplicationForm {
   wishPlacesWeekend?: Place[]
   wishDates?: string[]
   marketingConsent?: boolean
+  // v3.1
+  canRun5k?: boolean
+  runPurpose?: string // 'record' | 'steady'
+  plan?: string // 'single' | 'season'
+  recordProof?: string // 기록 인증 링크/메모
 }
 
 /**
@@ -142,7 +147,13 @@ export async function submitApplication(
   }
 
   // 2) applications insert
-  const appRow: Record<string, unknown> = { user_id: userId }
+  const appRow: Record<string, unknown> = {
+    user_id: userId,
+    can_run_5k: form.canRun5k ?? null,
+    run_purpose: form.runPurpose ?? null,
+    plan: form.plan ?? null,
+    record_proof: form.recordProof?.trim() || null,
+  }
   if (form.slotId) {
     appRow.slot_id = form.slotId
   } else {
@@ -231,6 +242,10 @@ export interface AdminApplication {
   wish_places_weekday: Place[] | null
   wish_places_weekend: Place[] | null
   wish_dates: string[] | null
+  can_run_5k: boolean | null
+  run_purpose: string | null
+  plan: string | null
+  record_proof: string | null
   slot_id: string | null
   slot_date: string | null
   slot_place: Place | null
@@ -245,6 +260,7 @@ export interface AdminApplication {
   user_pace: Pace | null
   user_total_count: number
   prior_participations: number
+  user_marketing_consent: boolean | null
 }
 
 /** 운영자 키로 전체 신청 목록 (이름/연락처 포함). 키 틀리면 throw. */

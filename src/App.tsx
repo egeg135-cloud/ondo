@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ApplyModal, type ApplySuccessInfo } from './components/ApplyModal'
+import { ApplyModal, ServiceScope, type ApplySuccessInfo } from './components/ApplyModal'
 import { MyApplicationsModal } from './components/MyApplicationsModal'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
@@ -183,6 +183,12 @@ function App() {
               })}
             </div>
           )}
+        </section>
+
+        {/* 서비스 범위 안내 */}
+        <section className="mt-14">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">ONDO는 이렇게 운영돼요</h2>
+          <ServiceScope />
         </section>
       </div>
 

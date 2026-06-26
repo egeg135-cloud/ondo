@@ -9,7 +9,7 @@ import {
 } from './lib/api'
 import { formatDateLabel } from './lib/dates'
 import { buildNotice } from './lib/notice'
-import { paceText } from './types'
+import { paceText, planText, purposeText } from './types'
 import type { Place, Slot } from './types'
 
 const PLACES: Place[] = ['여의도', '반포']
@@ -28,8 +28,9 @@ const STATUS_KO: Record<string, string> = {
 function exportApplicantsCsv(apps: AdminApplication[]) {
   const headers = [
     '이름', '연락처', '페이스', '성별', '나이', '신규/재참여',
+    '이용권', '러닝목적', '5km가능', '기록인증', '마케팅동의',
     '상태', '입금', '초대', '슬롯날짜', '슬롯장소',
-    '희망평일장소', '희망주말장소', '희망날짜', '신청일시',
+    '희망날짜', '신청일시',
   ]
   const cell = (v: unknown) => {
     const s = v == null ? '' : String(v)
@@ -44,13 +45,16 @@ function exportApplicantsCsv(apps: AdminApplication[]) {
     a.user_total_count > 0 || a.prior_participations > 0
       ? `재참여(${a.prior_participations || a.user_total_count}회)`
       : '신규',
+    planText(a.plan),
+    purposeText(a.run_purpose),
+    a.can_run_5k === true ? 'O' : a.can_run_5k === false ? 'X' : '',
+    a.record_proof ?? '',
+    a.user_marketing_consent ? 'O' : '',
     STATUS_KO[a.status] ?? a.status,
     a.paid ? 'O' : '',
     a.invited ? 'O' : '',
     a.slot_date ?? '',
     a.slot_place ?? '',
-    (a.wish_places_weekday ?? []).join(' '),
-    (a.wish_places_weekend ?? []).join(' '),
     (a.wish_dates ?? []).slice().sort().join(' '),
     new Date(a.created_at).toLocaleString('ko-KR'),
   ])
@@ -574,6 +578,12 @@ function ApplicantRow({
         </div>
         <p className="text-xs text-navy/55 mt-0.5">
           {paceText(a.user_pace)} 페이스 · {a.user_gender ?? '?'} · {a.user_age_range ?? '?'}
+        </p>
+        <p className="text-xs text-navy/45 mt-0.5">
+          {planText(a.plan) || '이용권 미선택'}
+          {a.run_purpose ? ` · ${purposeText(a.run_purpose)}` : ''}
+          {a.can_run_5k === false ? ' · ⚠️5km 미완주' : ''}
+          {a.record_proof ? ` · 📎${a.record_proof}` : ' · 기록 미인증'}
         </p>
       </div>
       <div className="shrink-0 flex items-center gap-1.5">
