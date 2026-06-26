@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApplyModal, ServiceScope, type ApplySuccessInfo } from './components/ApplyModal'
+import { Reviews } from './components/Reviews'
 import { MyApplicationsModal } from './components/MyApplicationsModal'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
@@ -184,6 +185,9 @@ function App() {
             </div>
           )}
         </section>
+
+        {/* 후기 · FOMO */}
+        <Reviews onApply={openGeneral} />
 
         {/* 서비스 범위 안내 */}
         <section className="mt-14">

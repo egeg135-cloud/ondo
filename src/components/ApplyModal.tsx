@@ -283,20 +283,41 @@ export function ApplyModal({ open, onClose, slot, onSuccess }: ApplyModalProps) 
 
           {/* 이용권 */}
           <Field label="이용권" hint="첫 참여는 무료예요">
-            <div className="grid grid-cols-2 gap-2">
-              {PLANS.map((p) => (
-                <Chip
-                  key={p.code}
-                  selected={plan === p.code}
-                  onClick={() => setPlan(p.code)}
-                  className="!py-3 !flex-col !items-start gap-0.5"
-                >
-                  <span className="font-bold">
-                    {p.label} <span className="text-gray-500 font-normal">{p.price}</span>
-                  </span>
-                  <span className="text-xs text-gray-400">{p.desc}</span>
-                </Chip>
-              ))}
+            <div className="space-y-2">
+              {PLANS.map((p) => {
+                const on = plan === p.code
+                return (
+                  <button
+                    key={p.code}
+                    type="button"
+                    onClick={() => setPlan(p.code)}
+                    className={
+                      'w-full text-left rounded-2xl border px-4 py-3 transition-colors ' +
+                      (on ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-900')
+                    }
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">{p.label}</span>
+                        {p.badge && (
+                          <span
+                            className={
+                              'text-[10px] font-bold px-1.5 py-0.5 rounded-full ' +
+                              (on ? 'bg-white text-gray-900' : 'bg-gray-900 text-white')
+                            }
+                          >
+                            {p.badge}
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-bold">{p.price}</span>
+                    </div>
+                    <p className={'text-xs mt-1 ' + (on ? 'text-white/70' : 'text-gray-400')}>
+                      {p.desc}
+                    </p>
+                  </button>
+                )
+              })}
             </div>
           </Field>
 

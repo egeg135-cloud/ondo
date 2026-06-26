@@ -26,9 +26,21 @@ export const RUN_PURPOSES: { code: string; label: string }[] = [
 ]
 
 // 이용권 (v3.1) — 회권/시즌권
-export const PLANS: { code: string; label: string; price: string; desc: string }[] = [
-  { code: 'single', label: '회권', price: '5,000원', desc: '1회 매칭' },
-  { code: 'season', label: '시즌권', price: '10,000원', desc: '4주 슬롯 풀 접근' },
+export const PLANS: {
+  code: string
+  label: string
+  price: string
+  desc: string
+  badge?: string
+}[] = [
+  { code: 'single', label: '회권', price: '5,000원', desc: '딱 한 번, 가볍게 시작해볼게요' },
+  {
+    code: 'season',
+    label: '시즌권',
+    price: '10,000원',
+    desc: '4주 내내 매주 매칭 · 회당 2,500원꼴',
+    badge: '인기',
+  },
 ]
 
 export function planText(code: string | null | undefined): string {
