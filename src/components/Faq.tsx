@@ -3,12 +3,18 @@ import { FAQS, RELATED_ARTICLES } from '../constants/content'
 import { analytics } from '../lib/analytics'
 
 export function Faq() {
-  const [open, setOpen] = useState<number | null>(null)
+  const [open, setOpen] = useState<Set<number>>(new Set())
 
   function toggle(i: number) {
-    const next = open === i ? null : i
-    setOpen(next)
-    if (next === i) analytics.faqOpen(FAQS[i].q)
+    setOpen((prev) => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else {
+        next.add(i)
+        analytics.faqOpen(FAQS[i].q)
+      }
+      return next
+    })
   }
 
   return (
@@ -21,12 +27,12 @@ export function Faq() {
               type="button"
               onClick={() => toggle(i)}
               className="w-full flex items-center justify-between gap-3 text-left px-4 py-3.5 bg-white"
-              aria-expanded={open === i}
+              aria-expanded={open.has(i)}
             >
               <span className="text-sm font-semibold text-gray-900">{f.q}</span>
-              <span className={'text-gray-400 transition-transform ' + (open === i ? 'rotate-180' : '')}>⌄</span>
+              <span className={'text-gray-400 transition-transform ' + (open.has(i) ? 'rotate-180' : '')}>⌄</span>
             </button>
-            {open === i && (
+            {open.has(i) && (
               <div className="px-4 pb-4 -mt-1 bg-white">
                 <p className="text-sm text-gray-600 leading-relaxed">{f.a}</p>
               </div>
