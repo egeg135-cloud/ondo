@@ -8,7 +8,7 @@ export function Footer() {
         <div>
           <p className="text-sm tracking-[0.4em] text-white font-extralight uppercase">ONDO</p>
           <p className="mt-1 text-xs text-white/50 leading-relaxed">
-            소규모 웰니스 매칭 서비스
+            페이스 기반 소규모 러너 매칭 서비스
           </p>
         </div>
 

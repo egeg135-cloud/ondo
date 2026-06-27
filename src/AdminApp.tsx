@@ -27,7 +27,7 @@ const STATUS_KO: Record<string, string> = {
 // 신청자 목록을 CSV(엑셀)로 내려받기. 엑셀 한글 깨짐 방지용 BOM 포함.
 function exportApplicantsCsv(apps: AdminApplication[]) {
   const headers = [
-    '이름', '연락처', '페이스', '성별', '나이', '신규/재참여',
+    '이름', '연락처', '페이스', '성별', '나이', 'MBTI', '신규/재참여',
     '이용권', '러닝목적', '5km가능', '기록인증', '마케팅동의',
     '상태', '입금', '초대', '슬롯날짜', '슬롯장소',
     '희망날짜', '신청일시',
@@ -42,6 +42,7 @@ function exportApplicantsCsv(apps: AdminApplication[]) {
     paceText(a.user_pace),
     a.user_gender ?? '',
     a.user_age_range ?? '',
+    a.user_mbti ?? '',
     a.user_total_count > 0 || a.prior_participations > 0
       ? `재참여(${a.prior_participations || a.user_total_count}회)`
       : '신규',
@@ -578,6 +579,7 @@ function ApplicantRow({
         </div>
         <p className="text-xs text-navy/55 mt-0.5">
           {paceText(a.user_pace)} 페이스 · {a.user_gender ?? '?'} · {a.user_age_range ?? '?'}
+          {a.user_mbti ? ` · ${a.user_mbti}` : ''}
         </p>
         <p className="text-xs text-navy/45 mt-0.5">
           {planText(a.plan) || '이용권 미선택'}

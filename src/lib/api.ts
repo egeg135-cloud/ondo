@@ -5,6 +5,31 @@ import type { ApplicationStatus, Gender, Pace, Place, Slot, SlotStatus, User } f
 /** 친절한 에러 메시지를 담는 커스텀 에러 */
 export class FriendlyError extends Error {}
 
+// ── 로그인 후 이어서 제출하기 위한 임시 보관 (카카오 redirect 중 폼 데이터 유지) ──
+const PENDING_KEY = 'ondo_pending_application'
+export function savePendingApplication(form: ApplicationForm) {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(form))
+  } catch {
+    /* noop */
+  }
+}
+export function getPendingApplication(): ApplicationForm | null {
+  try {
+    const s = localStorage.getItem(PENDING_KEY)
+    return s ? (JSON.parse(s) as ApplicationForm) : null
+  } catch {
+    return null
+  }
+}
+export function clearPendingApplication() {
+  try {
+    localStorage.removeItem(PENDING_KEY)
+  } catch {
+    /* noop */
+  }
+}
+
 const EVENT_GOAL = 500 // 무료 이벤트 목표 인원
 export const EVENT_GOAL_COUNT = EVENT_GOAL
 
@@ -103,6 +128,7 @@ export interface ApplicationForm {
   gender: Gender
   ageRange: string
   pace: Pace
+  mbti?: string
   slotId?: string
   wishPlacesWeekday?: Place[]
   wishPlacesWeekend?: Place[]
@@ -137,6 +163,7 @@ export async function submitApplication(
       gender: form.gender,
       age_range: form.ageRange,
       pace: form.pace,
+      mbti: form.mbti?.trim() || null,
       marketing_consent: form.marketingConsent ?? false,
     },
     { onConflict: 'id' },
@@ -261,6 +288,7 @@ export interface AdminApplication {
   user_total_count: number
   prior_participations: number
   user_marketing_consent: boolean | null
+  user_mbti: string | null
 }
 
 /** 운영자 키로 전체 신청 목록 (이름/연락처 포함). 키 틀리면 throw. */

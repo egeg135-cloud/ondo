@@ -35,6 +35,19 @@ export function isWeekendISO(iso: string): boolean {
   return dow === 0 || dow === 6
 }
 
+/** 오늘 이후 가장 가까운 목요일부터 count 개의 목요일 ISO 목록 (시즌권 자동선택용) */
+export function getNextThursdays(count = 4, from: Date = new Date()): string[] {
+  const start = new Date(from.getFullYear(), from.getMonth(), from.getDate())
+  const diff = (4 - start.getDay() + 7) % 7 // 0=오늘이 목요일
+  const result: string[] = []
+  for (let i = 0; i < count; i++) {
+    const d = new Date(start)
+    d.setDate(start.getDate() + diff + i * 7)
+    result.push(toISODate(d))
+  }
+  return result
+}
+
 /**
  * 오늘부터 다음 주 일요일까지의 날짜 칩 목록.
  * "이번 주 ~ 다음 주" 범위를 다중선택용으로 제공한다.

@@ -178,7 +178,7 @@ export function Calendar({ selected, onChange, monthsAhead = 1, allowedWeekdays 
 
       <p className="text-[11px] text-navy/40 mt-2 text-center">
         {allowedWeekdays
-          ? '모임은 목요일·토요일 저녁에 열려요. 요일 헤더를 누르면 한 번에 선택돼요'
+          ? '모임은 목요일에 열려요. 요일 헤더를 누르면 한 번에 선택돼요'
           : '요일(일~토)을 누르면 그 요일 전체 선택 · 날짜 위를 드래그해도 돼요'}
       </p>
     </div>

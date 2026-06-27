@@ -16,6 +16,7 @@ export interface User {
   total_count: number
   no_show_count: number
   marketing_consent?: boolean
+  mbti?: string | null
   created_at: string
 }
 
@@ -30,6 +31,7 @@ export const PLANS: {
   code: string
   label: string
   price: string
+  originalPrice?: string
   desc: string
   badge?: string
 }[] = [
@@ -38,8 +40,9 @@ export const PLANS: {
     code: 'season',
     label: '시즌권',
     price: '10,000원',
+    originalPrice: '20,000원',
     desc: '4주 내내 매주 매칭 · 회당 2,500원꼴',
-    badge: '인기',
+    badge: '50% 할인중',
   },
 ]
 
@@ -85,17 +88,17 @@ export interface Application {
 
 // ───────────────────────── 페이스 기준 (파일럿: 6:30 / 7:30 두 그룹만) ─────────────────────────
 // 페이스 = 1km당 분:초. DB(users.pace)는 A~D 제약이라 코드로 저장하고 표시만 숫자로.
-//   6:30 → 'C' ,  7:30 → 'B'  (7:30 이 하한선)
+//   6:00 → 'C' ,  7:00 → 'B'
 export const PACE_PICK: { code: Pace; label: string; desc: string }[] = [
-  { code: 'C', label: '6:30', desc: '1km를 6분 30초 페이스로 — 이미 꾸준히 뛰는 분' },
-  { code: 'B', label: '7:30', desc: '1km를 7분 30초 페이스로 — 가볍게 완주 가능한 분' },
+  { code: 'C', label: '6:00', desc: '1km를 6분 페이스로 — 이미 꾸준히 뛰는 분' },
+  { code: 'B', label: '7:00', desc: '1km를 7분 페이스로 — 가볍게 완주 가능한 분' },
 ]
 
 const PACE_NUM: Record<string, string> = {
-  C: '6:30',
-  B: '7:30',
-  '6:30': '6:30',
-  '7:30': '7:30',
+  C: '6:00',
+  B: '7:00',
+  '6:00': '6:00',
+  '7:00': '7:00',
   A: '걷기',
   D: '빠른 러닝',
 }

@@ -4,12 +4,18 @@ import { Reviews } from './components/Reviews'
 import { MyApplicationsModal } from './components/MyApplicationsModal'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
-import { signInWithKakao, useSession } from './lib/auth'
-import { EVENT_GOAL_COUNT, getUsersCount } from './lib/api'
+import { useSession } from './lib/auth'
+import {
+  EVENT_GOAL_COUNT,
+  clearPendingApplication,
+  getPendingApplication,
+  getUsersCount,
+  submitApplication,
+} from './lib/api'
 import { subscribeToApplications } from './lib/realtime'
 
 // 랜딩 카운터 표시용 베이스라인 (실제 DB 신청 수에 더해서 보여줌 — 운영자/엑셀엔 영향 없음).
-const DISPLAY_BASE_COUNT = 100
+const DISPLAY_BASE_COUNT = 157
 
 // 이번 주 목요일까지 남은 일수 (마감 D-day 표시용)
 function daysToNextThursday(): number {
@@ -37,11 +43,21 @@ function App() {
     return unsubscribe
   }, [refresh])
 
+  // 카카오 로그인 후 복귀 → 저장해둔 신청을 자동 제출
+  useEffect(() => {
+    if (!session) return
+    const pending = getPendingApplication()
+    if (!pending) return
+    clearPendingApplication()
+    submitApplication(pending)
+      .then(({ applicationId }) => {
+        setSuccess({ applicationId, phone: pending.phone, name: pending.name })
+        void refresh()
+      })
+      .catch((e) => console.error('[ONDO] 로그인 후 자동제출 실패:', e))
+  }, [session, refresh])
+
   function openGeneral() {
-    if (!session) {
-      void signInWithKakao()
-      return
-    }
     setModalOpen(true)
   }
   function handleSuccess(info: ApplySuccessInfo) {
@@ -98,7 +114,7 @@ function App() {
             {/* 이벤트 배너 */}
             <div className="mt-6">
               <p className="text-xs tracking-wide text-white/50 font-medium">
-                현재 무료 이벤트 · 선착순 {EVENT_GOAL_COUNT.toLocaleString()}명
+                베타 오픈 · 선착순 {EVENT_GOAL_COUNT.toLocaleString()}명
               </p>
               <p className="mt-2 text-3xl font-bold text-white">
                 {shownCount.toLocaleString()}
@@ -153,12 +169,20 @@ function App() {
             className="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-[0_0_40px_rgba(0,0,0,0.13)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-3xl">🙂</p>
-            <p className="mt-2 mb-2 font-bold text-gray-900 text-xl">신청 접수 완료!</p>
-            <p className="mt-1 text-sm text-gray-500">매칭이 확정되면 카톡으로 안내드릴게요.</p>
-            <p className="mt-1 mb-4 text-xs text-gray-400">
-              {success.name}님 / {success.phone}
-            </p>
+            <p className="text-3xl">🎉</p>
+            <p className="mt-2 mb-1 font-bold text-gray-900 text-xl">신청 완료!</p>
+            <p className="text-sm text-gray-500">아래 계좌로 입금하시면 매칭이 시작돼요.</p>
+
+            {/* 입금 안내 */}
+            <div className="mt-4 rounded-2xl bg-[#F5F5F5] p-4 text-left">
+              <p className="text-sm font-bold text-gray-900">💳 카카오뱅크 3333-37-0096737</p>
+              <p className="mt-1 text-sm text-gray-600">예금주: 김무관</p>
+              <p className="mt-1 text-sm text-gray-600">
+                입금자명: <span className="font-semibold text-gray-900">{success.name}</span> (본인 이름)
+              </p>
+            </div>
+            <p className="mt-2 text-xs text-gray-400">매칭이 확정되면 카톡으로 안내드릴게요.</p>
+
             <button
               type="button"
               onClick={() => setSuccess(null)}
