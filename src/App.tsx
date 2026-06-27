@@ -131,7 +131,7 @@ function App() {
           className="relative flex-shrink-0 flex flex-col justify-end overflow-hidden"
           style={{
             height: '100svh',
-            backgroundImage: 'url(/run.jpg)',
+            backgroundImage: 'url(/hero.jpg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}

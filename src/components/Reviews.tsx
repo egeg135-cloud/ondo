@@ -240,7 +240,7 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
         <div
           className="relative rounded-3xl overflow-hidden flex flex-col justify-end min-h-[340px] p-6"
           style={{
-            backgroundImage: 'url(/run.jpg)',
+            backgroundImage: 'url(/cta.jpg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
