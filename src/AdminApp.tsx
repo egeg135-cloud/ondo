@@ -3,6 +3,7 @@ import {
   adminListApplications,
   assignSlot,
   createSlot,
+  deleteSlot,
   getAllSlots,
   updateApplication,
   type AdminApplication,
@@ -12,7 +13,7 @@ import { buildNotice } from './lib/notice'
 import { paceText, planText, purposeText } from './types'
 import type { Place, Slot } from './types'
 
-const PLACES: Place[] = ['여의도', '반포']
+const PLACES: Place[] = ['여의도']
 
 function getKeyFromUrl(): string {
   return new URLSearchParams(window.location.search).get('key') ?? ''
@@ -318,8 +319,8 @@ function SlotCreateForm({ adminKey, onCreated }: { adminKey: string; onCreated: 
             onChange={(e) => setPaceLabel(e.target.value)}
             className="mt-1 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy text-sm bg-white"
           >
-            <option value="C">6:30 /km</option>
-            <option value="B">7:30 /km</option>
+            <option value="C">6:00 /km</option>
+            <option value="B">7:00 /km</option>
           </select>
         </label>
       </div>
@@ -437,7 +438,21 @@ function SlotGroupCard({
   onChange: () => void
 }) {
   const [showNotice, setShowNotice] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const warnings = computeWarnings(group)
+
+  async function handleDelete() {
+    if (!confirm(`슬롯을 삭제할까요?\n배정된 신청자(${group.apps.length}명)는 일반 신청으로 이동됩니다.`)) return
+    setDeleting(true)
+    try {
+      await deleteSlot(adminKey, group.slotId)
+      onChange()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '삭제 실패')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   return (
     <div className="rounded-2xl bg-white border border-navy/10 p-4">
@@ -446,9 +461,19 @@ function SlotGroupCard({
           {group.date ? formatDateLabel(group.date) : '?'} · {group.place}
           {group.paceLabel ? ` · ${paceText(group.paceLabel)} 페이스` : ''}
         </p>
-        <span className="text-sm text-sand font-semibold">
-          {group.apps.length}/{group.max ?? 5}명
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-sand font-semibold">
+            {group.apps.length}/{group.max ?? 5}명
+          </span>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-xs font-semibold text-rose-500 hover:text-rose-700 disabled:opacity-40"
+          >
+            {deleting ? '삭제 중…' : '슬롯 삭제'}
+          </button>
+        </div>
       </div>
 
       {warnings.length > 0 && (
@@ -500,7 +525,7 @@ function SlotGroupCard({
                   name: a.user_name,
                   date: group.date!,
                   place: group.place!,
-                  isReturning: a.user_total_count > 0 || a.prior_participations > 0,
+                  plan: a.plan,
                 })}
                 name={a.user_name}
               />

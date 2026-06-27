@@ -330,6 +330,18 @@ export async function createSlot(
   }
 }
 
+/** 운영자: 슬롯 삭제 (배정된 신청자는 일반 신청으로 이동) */
+export async function deleteSlot(key: string, slotId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_delete_slot', {
+    p_key: key,
+    p_slot_id: slotId,
+  })
+  if (error) {
+    console.error('[ONDO] deleteSlot 실패:', error)
+    throw new FriendlyError('슬롯 삭제에 실패했어요.')
+  }
+}
+
 /** 운영자: 신청을 슬롯에 배정/해제 (매칭). slotId=null 이면 일반 신청으로 되돌림. */
 export async function assignSlot(key: string, id: string, slotId: string | null): Promise<void> {
   const { error } = await supabase.rpc('admin_assign_slot', {
