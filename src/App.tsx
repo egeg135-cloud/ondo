@@ -189,11 +189,6 @@ function App() {
 
             {/* 마감 배지 + 메인 CTA */}
             <div className="mt-6">
-              <div className="flex justify-center">
-                <span className="relative rounded-full bg-white/15 backdrop-blur text-white text-xs font-semibold px-3 py-1.5 after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:top-full after:border-[5px] after:border-transparent after:border-t-white/15">
-                  🔥 선착순 무료 혜택 마감 임박
-                </span>
-              </div>
               <button
                 type="button"
                 onClick={() => {

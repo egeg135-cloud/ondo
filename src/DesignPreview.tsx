@@ -104,9 +104,6 @@ export default function DesignPreview() {
                 날짜·장소만 고르면 3~5명의 소그룹과 함께<br />부담없이 달릴 수 있습니다.
               </p>
               <div className="mt-6">
-                <p className="text-xs tracking-wide text-white/50 font-medium">
-                  현재 무료 이벤트 · 선착순 {EVENT_GOAL_COUNT.toLocaleString()}명
-                </p>
                 <p className="mt-2 text-3xl font-bold text-white">
                   {DUMMY_MEMBER_COUNT.toLocaleString()}
                   <span className="text-base font-normal text-white/60"> / {EVENT_GOAL_COUNT.toLocaleString()}명 참여</span>
