@@ -12,29 +12,6 @@ const ROADMAP: { step: string; title: string; desc: string }[] = [
   { step: '3', title: '목요일, 러닝메이트', desc: '여의도 한강 저녁 8시. 페이스 맞는 사람들과 부담 없이 5km.' },
 ]
 
-const REASONS: { tag: string; title: string; desc: string }[] = [
-  {
-    tag: '딱 좋은 인원',
-    title: '왜 3~5명일까',
-    desc: '20명 크루에선 “내가 안 뛰어도 티 안 나”. 3~5명은 서로의 존재감이 딱 살아나는 인원이에요.',
-  },
-  {
-    tag: '오버페이스 방지',
-    title: '왜 페이스를 맞출까',
-    desc: '나보다 빠르면 금방 지치고, 느리면 지루해요. 6:00·7:00 정밀 매칭이라 끝까지 딱 좋은 강도로 달려요.',
-  },
-  {
-    tag: '갓생 직장인용',
-    title: '왜 퇴근 후 목요일일까',
-    desc: '“퇴근하고 운동해야지” 하다가 결국 못 하잖아요. 주말은 약속도 많고요. 목요일 저녁 8시, 자리 잡아두면 가게 돼요.',
-  },
-  {
-    tag: '미니멀 러닝',
-    title: '왜 운영자가 없을까',
-    desc: 'E성향 호스트의 텐션도, 이미 친한 무리의 눈치도 없어요. 처음 보는 사람끼리 깔끔하게 만나 달리고, 깔끔하게 헤어져요.',
-  },
-]
-
 const REVIEWS: { quote: string; name: string; meta: string }[] = [
   {
     quote: '페이스가 맞으니까 처음으로 안 처지고 끝까지 뛰었어요. 다음 주도 바로 신청했어요.',
@@ -98,18 +75,56 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
 
       {/* 왜 ONDO일까 */}
       <section className="mt-14">
-        <h2 className="text-xl font-bold text-gray-900">왜 ONDO일까</h2>
-        <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">
-          ONDO의 규칙엔 이유가 있어요. 끝까지 즐겁게 달리게 만드는 작은 설계들.
-        </p>
-        <div className="mt-5 space-y-3">
-          {REASONS.map((s) => (
-            <div key={s.title} className="rounded-2xl bg-[#F5F5F5] p-4">
-              <p className="text-[11px] font-semibold text-gray-400">{s.tag}</p>
-              <p className="mt-1 font-bold text-gray-900">{s.title}</p>
-              <p className="mt-1 text-sm text-gray-600 leading-relaxed">{s.desc}</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-5">왜 ONDO일까</h2>
+        <div className="space-y-3">
+          {/* 카드 1 */}
+          <div className="rounded-2xl bg-[#F5F5F5] p-5">
+            <p className="font-bold text-gray-900">
+              딱 좋은 인원 <span className="text-gray-500">(3~5명)</span>
+            </p>
+            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+              숨을 곳도, 눈치 볼 필요도 없는 최적의 인원.
+              <br />
+              20명이 모이면 ‘나 하나쯤 안 뛰어도 되겠지.’
+              <br />
+              하지만 <span className="font-semibold text-gray-800">3~5명</span>은 서로의 페이스를 기분 좋게 지켜주는 가장 담백한 숫자입니다.
+              <br />
+              부담은 덜어내고, 러닝의 몰입감만 남겼습니다.
+            </p>
+          </div>
+
+          {/* 카드 2 */}
+          <div className="rounded-2xl bg-[#F5F5F5] p-5">
+            <p className="font-bold text-gray-900">미니멀 러닝</p>
+            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+              가식적인 친목도, 대형 무리의 눈치도 없는 해방감.
+              <br />
+              이미 친한 사람들 사이에 억지로 끼어들기 위해 에너지를 쓸 필요가 없습니다.
+              <br />
+              뒤풀이 강요도, 과도한 사생활 질문도 없습니다.
+              <br />
+              오직 달리기 하나로 만나 <span className="font-semibold text-gray-800">깔끔하게 뛰고, 깔끔하게 해산</span>합니다.
+            </p>
+          </div>
+
+          {/* 카드 3 — 취향 매칭 */}
+          <div className="rounded-2xl bg-[#F5F5F5] p-5">
+            <p className="font-bold text-gray-900">내 취향대로 고르는 목요일의 공기</p>
+            <div className="mt-3 space-y-2.5">
+              <div className="rounded-xl bg-white p-3.5">
+                <p className="font-semibold text-gray-900 text-sm">📊 T형 매칭</p>
+                <p className="mt-1 text-sm text-gray-600 leading-relaxed">
+                  기록 데이터, 러닝 기어, 가벼운 테크·경제 스몰토크가 자연스럽게 흐르는 그룹
+                </p>
+              </div>
+              <div className="rounded-xl bg-white p-3.5">
+                <p className="font-semibold text-gray-900 text-sm">🌅 F형 매칭</p>
+                <p className="mt-1 text-sm text-gray-600 leading-relaxed">
+                  한강의 노을과 야경을 즐기며 오늘 하루의 피로를 러닝으로 털어내는 편안한 분위기의 그룹
+                </p>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
@@ -161,6 +176,9 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
             >
               지금 신청하기
             </button>
+            <p className="mt-2 text-center text-xs text-white/50">
+              (번거로운 회원가입 절차를 싹 뺐어요!)
+            </p>
           </div>
         </div>
       </section>

@@ -38,11 +38,11 @@ export const PLANS: {
   { code: 'single', label: '회권', price: '5,000원', desc: '딱 한 번, 가볍게 시작해볼게요' },
   {
     code: 'season',
-    label: '시즌권',
+    label: '4주 완주 시즌권',
     price: '10,000원',
     originalPrice: '20,000원',
-    desc: '4주 내내 매주 매칭 · 회당 2,500원꼴',
-    badge: '50% 할인중',
+    desc: '4주 매주 매칭 · 회당 2,500원',
+    badge: '50% 한정 혜택',
   },
 ]
 

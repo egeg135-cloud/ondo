@@ -101,20 +101,28 @@ function App() {
               ))}
             </div>
             <h1 className="mt-4 text-3xl font-bold text-white leading-snug">
-              큰 러닝크루는 부담되지만,
+              달리기는 좋아하지만,
               <br />
-              혼자서는 운동이 안되는 당신을 위해.
+              사람에 치이고 싶진 않았습니다.
             </h1>
             <p className="mt-3 text-sm text-white/70 leading-relaxed">
-              목요일 저녁 8시, 여의도 한강.
+              대형 크루의 과한 친목은 부담스럽고,
               <br />
-              페이스 맞는 3~5명과 함께 5km를 달려요.
+              혼자 뛰기엔 침대가 너무 강력했던 목요일.
+              <br />
+              <br />
+              ONDO는 오늘도 핑계를 찾던 나를 밖으로 꺼내줄
+              <br />
+              딱 맞는 <strong className="text-white font-semibold">러닝메이트 3~5명</strong>만 연결합니다.
+              <br />
+              <br />
+              부담 없이 만나, 기분 좋게 뛰고, 깔끔하게 해산합니다.
             </p>
 
             {/* 이벤트 배너 */}
             <div className="mt-6">
               <p className="text-xs tracking-wide text-white/50 font-medium">
-                베타 오픈 · 선착순 {EVENT_GOAL_COUNT.toLocaleString()}명
+                🏃‍♂️ 현재 {shownCount.toLocaleString()}명 탑승 완료
               </p>
               <p className="mt-2 text-3xl font-bold text-white">
                 {shownCount.toLocaleString()}
@@ -127,11 +135,11 @@ function App() {
               </div>
             </div>
 
-            {/* 마감 D-day 배지 + 메인 CTA */}
+            {/* 마감 배지 + 메인 CTA */}
             <div className="mt-6">
               <div className="flex justify-center">
                 <span className="relative rounded-full bg-white/15 backdrop-blur text-white text-xs font-semibold px-3 py-1.5 after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:top-full after:border-[5px] after:border-transparent after:border-t-white/15">
-                  🔥 {ddayLabel}
+                  🔥 선착순 무료 혜택 마감 임박
                 </span>
               </div>
               <button
@@ -141,6 +149,9 @@ function App() {
               >
                 5초 만에 신청하기
               </button>
+              <p className="mt-2 text-center text-xs text-white/50">
+                (번거로운 회원가입 절차를 싹 뺐어요!)
+              </p>
             </div>
           </div>
         </section>

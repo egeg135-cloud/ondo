@@ -361,6 +361,8 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
                 </div>
               </Field>
 
+              {plan === 'season' && <SeasonDetail />}
+
               <Field label="희망 날짜" hint="목요일만 운영해요">
                 <p className="mb-2 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg px-3 py-2">
                   📍 <span className="font-bold">여의도 한강 · 목요일 저녁 8시(20:00)</span> · 5km
@@ -477,6 +479,48 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+const SEASON_TIMELINE: { week: string; title: string; desc: string }[] = [
+  { week: '1주차', title: '첫 온도', desc: '어색함은 제로. 나와 페이스가 비슷한 러닝메이트와 기분 좋은 첫 한강 러닝.' },
+  { week: '2주차', title: '체득', desc: '오버페이스 없는 달리기. 내 숨소리에 집중하며 5km를 지치지 않고 완주하는 경험.' },
+  { week: '3주차', title: '전환', desc: '목요일 밤 8시가 기다려지기 시작합니다. 낮 동안 쌓인 업무 스트레스가 한강 바람과 함께 풀려요.' },
+  { week: '4주차', title: '습관', desc: '4주 완주 완료. 달리기는 더 이상 결심해야 하는 숙제가 아니라, 삶 속의 기분 좋은 루틴이 됩니다.' },
+]
+
+// 시즌권 선택 시 노출되는 설명 · 4주 타임라인 · 안내문
+function SeasonDetail() {
+  return (
+    <div className="rounded-2xl bg-gray-900 text-white p-4">
+      <p className="text-sm leading-relaxed">
+        의지보다 강력한 건, <span className="font-bold">나를 기다리는 동료들</span>입니다.
+        <br />
+        억지로 쥐어짜는 갓생 말고, 매주 목요일 밤 자연스럽게 몸이 먼저 반응하는 4주 러닝 루틴을 만들어보세요.
+      </p>
+
+      <div className="mt-4 relative pl-1">
+        <div className="absolute left-[5px] top-2 bottom-2 w-px bg-white/20" />
+        <div className="space-y-3">
+          {SEASON_TIMELINE.map((w) => (
+            <div key={w.week} className="relative flex gap-3">
+              <div className="relative z-10 mt-1 w-2.5 h-2.5 shrink-0 rounded-full bg-white" />
+              <div>
+                <p className="text-sm font-bold">
+                  {w.week} · {w.title}
+                </p>
+                <p className="text-xs text-white/60 mt-0.5 leading-relaxed">{w.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="mt-4 text-xs text-white/70 leading-relaxed border-t border-white/10 pt-3">
+        시즌권 러너에게는 매주 페이스와 성향(T/F, 조용한 러닝 등)에 가장 잘 맞는 그룹을{' '}
+        <span className="font-bold text-white">1순위로 정밀 매칭</span>해드려요.
+      </p>
     </div>
   )
 }
