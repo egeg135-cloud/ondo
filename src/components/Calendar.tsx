@@ -26,7 +26,20 @@ export function Calendar({ selected, onChange, monthsAhead = 1, allowedWeekdays 
   const todayIso = toISODate(today)
   const curIndex = today.getFullYear() * 12 + today.getMonth()
 
-  const [viewIndex, setViewIndex] = useState(curIndex)
+  // 이번 달에 선택 가능한 날짜(오늘 이후)가 없으면 다음 달부터 시작
+  const hasSelectableThisMonth = (() => {
+    const y = Math.floor(curIndex / 12)
+    const m = curIndex % 12
+    const days = new Date(y, m + 1, 0).getDate()
+    for (let d = 1; d <= days; d++) {
+      const date = new Date(y, m, d)
+      const iso = toISODate(date)
+      if (iso < todayIso) continue
+      if (!allowedWeekdays || allowedWeekdays.includes(date.getDay())) return true
+    }
+    return false
+  })()
+  const [viewIndex, setViewIndex] = useState(hasSelectableThisMonth ? curIndex : curIndex + 1)
   const year = Math.floor(viewIndex / 12)
   const month = viewIndex % 12
 
