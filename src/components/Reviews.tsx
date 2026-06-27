@@ -1,5 +1,7 @@
 // 랜딩 본문 — 페인포인트 · 로드맵 · 이유 · 후기 · 마감 CTA.
-// ⚠️ REVIEWS 는 샘플 카피입니다 — 실제 후기가 모이면 교체하세요.
+import { useEffect, useRef } from 'react'
+import { BETA_NOTE, COMMON_OPINIONS, TESTIMONIALS } from '../constants/content'
+import { analytics } from '../lib/analytics'
 
 const PAINS: string[] = [
   '이미 다들 친한 분위기라, 끼기가 부담스러웠어요.',
@@ -12,25 +14,26 @@ const ROADMAP: { step: string; title: string; desc: string }[] = [
   { step: '3', title: '목요일, 러닝메이트', desc: '여의도 한강 저녁 8시. 페이스 맞는 사람들과 부담 없이 5km.' },
 ]
 
-const REVIEWS: { quote: string; name: string; meta: string }[] = [
-  {
-    quote: '페이스가 맞으니까 처음으로 안 처지고 끝까지 뛰었어요. 다음 주도 바로 신청했어요.',
-    name: '김O연',
-    meta: '6:00 · AI 개발자',
-  },
-  {
-    quote: '목요일 8시가 한 주의 리셋 버튼이 됐어요. 퇴근하고 바로 여의도로 직행해요.',
-    name: '이O준',
-    meta: '7:00 · 행사 마케터',
-  },
-  {
-    quote: '처음 보는 사람들끼리라 오히려 편해요. 깔끔하게 달리고 깔끔하게 헤어지는 게 딱 좋아요.',
-    name: '박O',
-    meta: '6:00 · 약사',
-  },
-]
-
 export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel: string }) {
+  const whyRef = useRef<HTMLElement>(null)
+
+  // WHY ONDO 영역 노출 시 1회 추적
+  useEffect(() => {
+    const el = whyRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          analytics.whyOndoView()
+          io.disconnect()
+        }
+      },
+      { threshold: 0.4 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
   return (
     <>
       {/* 페인포인트 */}
@@ -74,7 +77,7 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
       </section>
 
       {/* 왜 ONDO일까 */}
-      <section className="mt-14">
+      <section ref={whyRef} className="mt-14">
         <h2 className="text-xl font-bold text-gray-900 mb-5">왜 ONDO일까</h2>
         <div className="space-y-3">
           {/* 카드 1 */}
@@ -130,22 +133,30 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
 
       {/* 후기 */}
       <section className="mt-14">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">먼저 뛰어본 분들</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">실제 참가 후기</h2>
         <div className="space-y-3">
-          {REVIEWS.map((r) => (
-            <div key={r.name} className="rounded-2xl bg-white border border-gray-200 shadow-sm p-4">
-              <p className="text-sm text-gray-800 leading-relaxed">“{r.quote}”</p>
-              <div className="mt-3 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center">
-                  {r.name.slice(0, 1)}
-                </div>
-                <span className="text-xs text-gray-500">
-                  <span className="font-semibold text-gray-700">{r.name}</span> · {r.meta}
-                </span>
-              </div>
+          {TESTIMONIALS.map((r) => (
+            <div key={r.meta + r.quote.slice(0, 6)} className="rounded-2xl bg-white border border-gray-200 shadow-sm p-4">
+              <p className="text-sm text-gray-800 leading-relaxed">💬 “{r.quote}”</p>
+              <p className="mt-2 text-xs text-gray-400">{r.meta}</p>
             </div>
           ))}
         </div>
+
+        {/* 가장 많이 나온 의견 */}
+        <div className="mt-6 rounded-2xl bg-[#F5F5F5] p-5">
+          <p className="font-bold text-gray-900 mb-3">가장 많이 나온 의견</p>
+          <ul className="space-y-1.5">
+            {COMMON_OPINIONS.map((o) => (
+              <li key={o} className="flex gap-2 text-sm text-gray-600">
+                <span className="text-emerald-600 font-bold">✓</span>
+                <span>{o}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="mt-4 text-xs text-gray-400 leading-relaxed">{BETA_NOTE}</p>
       </section>
 
       {/* 사진 밴드 + 마감 CTA */}

@@ -13,6 +13,7 @@ import {
   type ApplicationForm,
 } from '../lib/api'
 import { signInWithKakao, useSession } from '../lib/auth'
+import { analytics } from '../lib/analytics'
 
 const GENDERS: Gender[] = ['남', '여']
 const FIXED_PLACE = '여의도' as const
@@ -101,6 +102,7 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
   // 이용권 선택 — 시즌권이면 다음 4주 목요일 자동 선택, 회권이면 직접 고르게 비움
   function choosePlan(code: string) {
     setPlan(code)
+    analytics.planSelect(code === 'season' ? 'season' : 'single')
     if (code === 'season') setDates(getNextThursdays(4))
     else setDates([])
   }
@@ -137,6 +139,7 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
   async function proceed(marketing: boolean) {
     setAskMarketing(false)
     setError('')
+    analytics.applicationSubmit()
     const form = buildForm(marketing)
     saveLastPhone(phone.trim())
     if (!session) {

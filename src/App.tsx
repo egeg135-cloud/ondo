@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApplyModal, ServiceScope, type ApplySuccessInfo } from './components/ApplyModal'
 import { Reviews } from './components/Reviews'
+import { Faq } from './components/Faq'
+import { SeoJsonLd } from './components/SeoJsonLd'
 import { MyApplicationsModal } from './components/MyApplicationsModal'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
@@ -13,6 +15,8 @@ import {
   submitApplication,
 } from './lib/api'
 import { subscribeToApplications } from './lib/realtime'
+import { HERO_VARIANTS, pickHeroVariant } from './constants/content'
+import { analytics } from './lib/analytics'
 
 // 랜딩 카운터 표시용 베이스라인 (실제 DB 신청 수에 더해서 보여줌 — 운영자/엑셀엔 영향 없음).
 const DISPLAY_BASE_COUNT = 157
@@ -25,6 +29,8 @@ function daysToNextThursday(): number {
 
 function App() {
   const [memberCount, setMemberCount] = useState(0)
+  const [variant] = useState(pickHeroVariant)
+  const hero = HERO_VARIANTS[variant]
 
   const [modalOpen, setModalOpen] = useState(false)
   const [success, setSuccess] = useState<ApplySuccessInfo | null>(null)
@@ -43,6 +49,44 @@ function App() {
     return unsubscribe
   }, [refresh])
 
+  // 퍼널 추적: page_view + A/B 노출 + 스크롤 깊이 + exit intent
+  useEffect(() => {
+    analytics.pageView()
+    analytics.experimentView('hero_copy', variant)
+
+    const fired = new Set<number>()
+    const onScroll = () => {
+      const h = document.documentElement
+      const pct = ((h.scrollTop + h.clientHeight) / h.scrollHeight) * 100
+      ;([25, 50, 75] as const).forEach((p) => {
+        if (pct >= p && !fired.has(p)) {
+          fired.add(p)
+          analytics.scroll(p)
+        }
+      })
+    }
+    let exited = false
+    const onExit = () => {
+      if (exited) return
+      exited = true
+      analytics.exitIntent()
+    }
+    const onMouseOut = (e: MouseEvent) => {
+      if (e.clientY <= 0) onExit()
+    }
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') onExit()
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    document.addEventListener('mouseout', onMouseOut)
+    document.addEventListener('visibilitychange', onHide)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      document.removeEventListener('mouseout', onMouseOut)
+      document.removeEventListener('visibilitychange', onHide)
+    }
+  }, [variant])
+
   // 카카오 로그인 후 복귀 → 저장해둔 신청을 자동 제출
   useEffect(() => {
     if (!session) return
@@ -51,6 +95,8 @@ function App() {
     clearPendingApplication()
     submitApplication(pending)
       .then(({ applicationId }) => {
+        analytics.applicationComplete({ plan: pending.plan })
+        analytics.paymentStart()
         setSuccess({ applicationId, phone: pending.phone, name: pending.name })
         void refresh()
       })
@@ -58,9 +104,12 @@ function App() {
   }, [session, refresh])
 
   function openGeneral() {
+    analytics.modalOpen()
     setModalOpen(true)
   }
   function handleSuccess(info: ApplySuccessInfo) {
+    analytics.applicationComplete()
+    analytics.paymentStart()
     setModalOpen(false)
     setSuccess(info)
     void refresh()
@@ -73,6 +122,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-black flex justify-center">
+      <SeoJsonLd />
       <Navbar session={session} onMyApps={() => setMyAppsOpen(true)} />
 
       <div className="w-full max-w-[550px] bg-white flex flex-col">
@@ -91,7 +141,7 @@ function App() {
           <div className="relative z-10 w-full px-4 pb-10 pt-14">
             <p className="ml-1 text-xs tracking-[0.5em] text-white/60 font-extralight uppercase">ONDO</p>
             <div className="mt-4 flex flex-wrap gap-1.5">
-              {['3~5명 소그룹', '페이스 정밀 매칭', '목요일 여의도'].map((t) => (
+              {hero.badges.map((t) => (
                 <span
                   key={t}
                   className="rounded-full bg-black text-white text-xs font-semibold px-3 py-1.5 border border-white/15"
@@ -101,23 +151,25 @@ function App() {
               ))}
             </div>
             <h1 className="mt-4 text-3xl font-bold text-white leading-snug">
-              달리기는 좋아하지만,
-              <br />
-              사람에 치이고 싶진 않았습니다.
+              {hero.title.map((line, i) => (
+                <span key={i}>
+                  {line}
+                  {i < hero.title.length - 1 && <br />}
+                </span>
+              ))}
             </h1>
-            <p className="mt-3 text-sm text-white/70 leading-relaxed">
-              대형 크루의 과한 친목은 부담스럽고,
-              <br />
-              혼자 뛰기엔 침대가 너무 강력했던 목요일.
-              <br />
-              <br />
-              ONDO는 오늘도 핑계를 찾던 나를 밖으로 꺼내줄
-              <br />
-              딱 맞는 <strong className="text-white font-semibold">러닝메이트 3~5명</strong>만 연결합니다.
-              <br />
-              <br />
-              부담 없이 만나, 기분 좋게 뛰고, 깔끔하게 해산합니다.
-            </p>
+            <div className="mt-3 text-sm text-white/70 leading-relaxed space-y-3">
+              {hero.subtitle.map((para, pi) => (
+                <p key={pi}>
+                  {para.map((line, li) => (
+                    <span key={li}>
+                      {line}
+                      {li < para.length - 1 && <br />}
+                    </span>
+                  ))}
+                </p>
+              ))}
+            </div>
 
             {/* 이벤트 배너 */}
             <div className="mt-6">
@@ -144,10 +196,13 @@ function App() {
               </div>
               <button
                 type="button"
-                onClick={openGeneral}
-                className="mt-2.5 w-full rounded-2xl bg-white text-gray-900 font-bold py-4 text-base active:scale-[0.99] transition-transform"
+                onClick={() => {
+                  analytics.heroCtaClick()
+                  openGeneral()
+                }}
+                className="mt-2.5 w-full rounded-2xl bg-white text-gray-900 font-bold py-4 text-base shadow-lg active:scale-[0.99] transition-transform"
               >
-                5초 만에 신청하기
+                {hero.cta}
               </button>
               <p className="mt-2 text-center text-xs text-white/50">
                 (번거로운 회원가입 절차를 싹 뺐어요!)
@@ -157,7 +212,17 @@ function App() {
         </section>
 
         <div className="flex-1 mx-4 pb-24">
-          {/* 후기 · 로드맵 · 과학 · FOMO */}
+          {/* GEO 한 문장 정의 (AI 인용 친화) */}
+          <section className="mt-12">
+            <p className="text-base text-gray-900 leading-relaxed">
+              <strong className="font-bold">ONDO</strong>는 서울 직장인을 위한{' '}
+              <strong className="font-semibold">3~5인 소규모 러닝메이트 매칭 서비스</strong>입니다.
+              <br />
+              매주 목요일 저녁 8시 여의도 한강에서 비슷한 페이스의 러너를 연결합니다.
+            </p>
+          </section>
+
+          {/* 후기 · 로드맵 · 이유 · FOMO */}
           <Reviews onApply={openGeneral} ddayLabel={ddayLabel} />
 
           {/* 서비스 범위 안내 */}
@@ -165,6 +230,9 @@ function App() {
             <h2 className="text-xl font-bold text-gray-900 mb-4">ONDO는 이렇게 운영돼요</h2>
             <ServiceScope />
           </section>
+
+          {/* 자주 묻는 질문 + 더 읽어보기 */}
+          <Faq />
         </div>
 
         <Footer />
