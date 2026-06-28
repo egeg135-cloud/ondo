@@ -42,7 +42,7 @@ function TestimonialSlider() {
             style={{ opacity: current === i ? 1 : 0, pointerEvents: current === i ? 'auto' : 'none' }}
           >
             <img
-              src={`/후기${i + 1}.jpeg`}
+              src={`/review${i + 1}.jpeg`}
               alt={`참가 후기 ${i + 1}`}
               className="w-full h-full object-cover"
               draggable={false}
