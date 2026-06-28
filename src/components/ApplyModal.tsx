@@ -23,6 +23,7 @@ export interface ApplySuccessInfo {
   applicationId: string
   phone: string
   name: string
+  plan: string | null
 }
 
 interface ApplyModalProps {
@@ -47,6 +48,7 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
   const [dates, setDates] = useState<string[]>([])
   const [plan, setPlan] = useState<string | null>(null)
   const [recordProof, setRecordProof] = useState('')
+  const [referralCode, setReferralCode] = useState('')
 
   const [agreeTerms, setAgreeTerms] = useState(false)
   const [agreePrivacy, setAgreePrivacy] = useState(false)
@@ -123,6 +125,7 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
       runPurpose: runPurpose ?? undefined,
       plan: plan ?? undefined,
       recordProof,
+      referralCode: referralCode.trim() || undefined,
     }
   }
 
@@ -152,7 +155,7 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
     setSubmitting(true)
     try {
       const { applicationId } = await submitApplication(form)
-      onSuccess({ applicationId, phone: phone.trim(), name: name.trim() })
+      onSuccess({ applicationId, phone: phone.trim(), name: name.trim(), plan })
     } catch (e) {
       setError(e instanceof FriendlyError ? e.message : '알 수 없는 오류가 발생했어요. 다시 시도해 주세요.')
     } finally {
@@ -365,6 +368,17 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
               </Field>
 
               {plan === 'season' && <SeasonDetail />}
+
+              <Field label="친구 추천 코드" hint="선택 — 친구 이름+전화번호 뒷 4자리 (예: 홍길동9999)">
+                <input
+                  type="text"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value)}
+                  placeholder="홍길동9999"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-900"
+                />
+                <p className="mt-1.5 text-xs text-emerald-600">입력하면 두 분 모두 1,000원 환급 (참가 확인 후)</p>
+              </Field>
 
               <Field label="희망 날짜" hint="목요일만 운영해요">
                 <p className="mb-2 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg px-3 py-2">

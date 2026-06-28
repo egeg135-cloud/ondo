@@ -139,6 +139,7 @@ export interface ApplicationForm {
   runPurpose?: string // 'record' | 'steady'
   plan?: string // 'single' | 'season'
   recordProof?: string // 기록 인증 링크/메모
+  referralCode?: string // 친구 추천 코드 (이름+전화번호뒷4자리)
 }
 
 /**
@@ -180,6 +181,7 @@ export async function submitApplication(
     run_purpose: form.runPurpose ?? null,
     plan: form.plan ?? null,
     record_proof: form.recordProof?.trim() || null,
+    referral_code: form.referralCode?.trim() || null,
   }
   if (form.slotId) {
     appRow.slot_id = form.slotId

@@ -20,3 +20,4 @@ npm-debug.log*
 
 # 옛 프로토타입 백업 (배포 레포에서 제외)
 src_old_backup/
+.vercel

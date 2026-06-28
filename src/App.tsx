@@ -97,7 +97,7 @@ function App() {
       .then(({ applicationId }) => {
         analytics.applicationComplete({ plan: pending.plan })
         analytics.paymentStart()
-        setSuccess({ applicationId, phone: pending.phone, name: pending.name })
+        setSuccess({ applicationId, phone: pending.phone, name: pending.name, plan: pending.plan ?? null })
         void refresh()
       })
       .catch((e) => console.error('[ONDO] 로그인 후 자동제출 실패:', e))
@@ -131,7 +131,7 @@ function App() {
           className="relative flex-shrink-0 flex flex-col justify-end overflow-hidden"
           style={{
             height: '100svh',
-            backgroundImage: 'url(/hero.jpg)',
+            backgroundImage: 'url(/run.jpg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
@@ -249,10 +249,16 @@ function App() {
 
             {/* 입금 안내 */}
             <div className="mt-4 rounded-2xl bg-[#F5F5F5] p-4 text-left">
-              <p className="text-sm font-bold text-gray-900">💳 카카오뱅크 3333-37-0096737</p>
+              <p className="text-sm font-bold text-gray-900">
+                💳 {success.plan === 'season' ? '10,000원' : '5,000원'} 입금
+                <span className="ml-1.5 text-xs font-normal text-gray-400">
+                  ({success.plan === 'season' ? '4주 시즌권' : '1회권'})
+                </span>
+              </p>
+              <p className="mt-2 text-sm font-bold text-gray-900">카카오뱅크 3333-37-0096737</p>
               <p className="mt-1 text-sm text-gray-600">예금주: 김무관</p>
               <p className="mt-1 text-sm text-gray-600">
-                입금자명: <span className="font-semibold text-gray-900">{success.name}</span> (본인 이름)
+                입금자명: <span className="font-semibold text-gray-900">{success.name}</span>
               </p>
             </div>
             <p className="mt-2 text-xs text-gray-400">매칭이 확정되면 카톡으로 안내드릴게요.</p>

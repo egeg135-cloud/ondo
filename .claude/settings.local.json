@@ -10,7 +10,29 @@
       "Bash(echo \"---TSC EXIT: $?---\")",
       "Bash(curl -s \"http://localhost:5173/src/main.tsx\")",
       "Bash(curl -s \"http://localhost:5173/src/App.tsx\")",
-      "Bash(curl -s \"http://localhost:5173/\")"
+      "Bash(curl -s \"http://localhost:5173/\")",
+      "Bash(grep -iE \"\\\\.env$|src_old_backup\")",
+      "Bash(ssh-keygen -t ed25519 -C \"egeg135@naver.com\" -f ~/.ssh/id_ed25519 -N \"\" -q)",
+      "Bash(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -T git@github.com)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s https://sage-daifuku-76b81b.netlify.app/)",
+      "Bash(head)",
+      "Bash(echo \"=== JS 번들에 supabase URL 박혔나 ===\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://sage-daifuku-76b81b.netlify.app/admin)",
+      "Bash(curl -s -o /dev/null -w \"landing: %{http_code}\\\\n\" https://ondomatch.netlify.app/)",
+      "Bash(curl -s -o /dev/null -w \"admin:   %{http_code}\\\\n\" https://ondomatch.netlify.app/admin)",
+      "Bash(curl -s https://ondomatch.netlify.app/)",
+      "Bash(git add *)",
+      "Bash(git reset *)",
+      "Bash(git rev-list *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(git -C /Users/oestsky/Downloads/ondo status --short)",
+      "Bash(git -C /Users/oestsky/Downloads/ondo diff -w --stat)",
+      "Bash(git -C /Users/oestsky/Downloads/ondo diff -w tailwind.config.js)",
+      "Bash(git -C /Users/oestsky/Downloads/ondo diff -w src/App.tsx)",
+      "mcp__47245346-b709-4f3b-a7b8-bea74f62c577__generate_image"
     ]
   }
 }
