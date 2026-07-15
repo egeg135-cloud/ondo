@@ -45,19 +45,19 @@ export function track(event: string, props: Props = {}) {
 
 // ── 퍼널별 이벤트 (함수로 분리) ──
 export const analytics = {
-  pageView: (props?: Props) => track('page_view', props),
+  // page_view는 gtag('config') 자동 집계 — 수동 발사 금지(이중 집계)
   heroCtaClick: () => track('hero_cta_click'),
+  leadSubmit: () => track('lead_submit'),
   scroll: (pct: 25 | 50 | 75) => track(`scroll_${pct}`),
   whyOndoView: () => track('why_ondo_view'),
   faqOpen: (question: string) => track('faq_open', { question }),
   modalOpen: () => track('application_modal_open'),
-  planSelect: (plan: 'single' | 'season') =>
-    track(plan === 'single' ? 'plan_select_single' : 'plan_select_season', { plan }),
+  applyStep: (step: number, stepName: string) =>
+    track('apply_step_completed', { step, step_name: stepName }),
   applicationSubmit: () => track('application_submit'),
   applicationComplete: (props?: Props) => track('application_complete', props),
-  paymentStart: () => track('payment_start'),
-  paymentSuccess: () => track('payment_success'),
-  paymentFail: () => track('payment_fail'),
+  depositStart: () => track('deposit_start'),
+  depositCopyAccount: () => track('deposit_copy_account'),
   exitIntent: () => track('exit_intent'),
   experimentView: (name: string, variant: string) =>
     track('experiment_view', { experiment: name, variant }),

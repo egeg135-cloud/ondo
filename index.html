@@ -15,7 +15,8 @@
       content="ONDO는 서울 직장인을 위한 3~5인 소규모 러닝메이트 매칭 서비스입니다. 매주 목요일 저녁 여의도 한강에서 페이스가 맞는 러너를 연결합니다. 친목 부담 없이, 깔끔하게."
     />
     <meta name="keywords" content="서울 러닝메이트, 직장인 러닝모임, 퇴근 후 러닝, 한강 러닝, 여의도 러닝, 소규모 러닝모임, 친목 없는 러닝, 페이스 매칭" />
-    <link rel="canonical" href="https://ondomatch.netlify.app/" />
+    <link rel="canonical" href="https://ondo-match.vercel.app/" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -24,9 +25,97 @@
       property="og:description"
       content="매주 목요일 저녁 여의도 한강에서 페이스가 맞는 러너 3~5명을 연결합니다. 친목 부담 없이, 깔끔하게."
     />
-    <meta property="og:image" content="https://ondomatch.netlify.app/run.jpg" />
-    <meta property="og:url" content="https://ondomatch.netlify.app/" />
+    <meta property="og:image" content="https://ondo-match.vercel.app/run.jpg" />
+    <meta property="og:url" content="https://ondo-match.vercel.app/" />
+    <meta property="og:locale" content="ko_KR" />
     <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- 구조화 데이터 (정적 — 네이버·AI 크롤러는 JS를 실행하지 않으므로 head에 직접) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://ondo-match.vercel.app/#org",
+          "name": "ONDO",
+          "alternateName": "온도",
+          "url": "https://ondo-match.vercel.app/",
+          "logo": "https://ondo-match.vercel.app/run.jpg",
+          "description": "혼자 뛰던 서울 직장인을 위한 3~5인 소규모 러닝 메이트 매칭 서비스",
+          "sameAs": ["https://www.instagram.com/ondo.pm/"]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://ondo-match.vercel.app/#website",
+          "name": "ONDO · 서울 직장인 러닝메이트 매칭",
+          "url": "https://ondo-match.vercel.app/",
+          "inLanguage": "ko-KR",
+          "publisher": { "@id": "https://ondo-match.vercel.app/#org" }
+        },
+        {
+          "@type": "Service",
+          "name": "ONDO 러닝메이트 매칭",
+          "serviceType": "소규모 러닝메이트 매칭",
+          "provider": { "@id": "https://ondo-match.vercel.app/#org" },
+          "areaServed": { "@type": "City", "name": "서울" },
+          "description": "ONDO는 혼자 뛰던 서울 직장인이 매주 함께 뛰는 러닝 루틴을 만드는 러닝 메이트 매칭 서비스입니다. 매주 목요일 저녁 8시 여의도 한강에서 나와 비슷한 페이스의 러너 3~5명과 5km를 달립니다.",
+          "offers": {
+            "@type": "Offer",
+            "name": "이번 주 참여 (무료)",
+            "price": "0",
+            "priceCurrency": "KRW",
+            "availability": "https://schema.org/InStock",
+            "url": "https://ondo-match.vercel.app/"
+          }
+        },
+        {
+          "@type": "Event",
+          "name": "ONDO 목요 러닝 · 여의도 한강 5km",
+          "description": "비슷한 페이스(6:00/7:00)의 러너 3~5명이 여의도 한강에서 5km를 함께 달리는 소규모 러닝 매칭 모임. 매주 목요일 저녁 8시, 참가비 무료(노쇼 방지 보증금 10,000원, 참석 시 이월·환급).",
+          "eventSchedule": {
+            "@type": "Schedule",
+            "byDay": "https://schema.org/Thursday",
+            "startTime": "20:00",
+            "repeatFrequency": "P1W",
+            "scheduleTimezone": "Asia/Seoul"
+          },
+          "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+          "eventStatus": "https://schema.org/EventScheduled",
+          "location": {
+            "@type": "Place",
+            "name": "여의도 한강공원",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "서울특별시",
+              "addressRegion": "영등포구",
+              "addressCountry": "KR"
+            }
+          },
+          "organizer": { "@id": "https://ondo-match.vercel.app/#org" },
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "KRW",
+            "availability": "https://schema.org/InStock",
+            "url": "https://ondo-match.vercel.app/"
+          },
+          "maximumAttendeeCapacity": 5
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            { "@type": "Question", "name": "ONDO는 어떤 서비스인가요?", "acceptedAnswer": { "@type": "Answer", "text": "ONDO는 혼자 뛰던 직장인이 매주 함께 뛰는 러닝 루틴을 만드는 서비스입니다. 매주 목요일 저녁 8시 여의도 한강에서 나와 비슷한 페이스의 러너 3~5명과 5km를 달립니다." } },
+            { "@type": "Question", "name": "러닝크루랑 뭐가 다른가요?", "acceptedAnswer": { "@type": "Answer", "text": "대형 러닝크루는 인원이 많고 이미 친목이 형성돼 있어 끼어들기 부담스럽습니다. ONDO는 매주 새로 구성되는 3~5명 소규모라, 처음 보는 사람끼리 부담 없이 만나 달리고 깔끔하게 헤어집니다." } },
+            { "@type": "Question", "name": "정말 무료인가요?", "acceptedAnswer": { "@type": "Answer", "text": "네, 참가비는 무료입니다. 대신 약속을 지키기 위한 보증금 10,000원이 있어요. 참석하면 다음 주로 자동 이월되고, 그만둘 땐 언제든 전액 환급됩니다. 노쇼 시에만 소멸돼요." } },
+            { "@type": "Question", "name": "혼자 신청해도 되나요?", "acceptedAnswer": { "@type": "Answer", "text": "네, 대부분 혼자 신청합니다. 모두 처음 만나는 사이라 오히려 편하게 시작할 수 있습니다." } },
+            { "@type": "Question", "name": "여성 혼자도 참여할 수 있나요?", "acceptedAnswer": { "@type": "Answer", "text": "네. 모임은 최소 3명 이상, 저녁 8시 공개된 한강공원에서만 진행하며 성비 균형도 고려해 매칭합니다. 1:1 매칭은 하지 않습니다." } },
+            { "@type": "Question", "name": "페이스 못 따라가면 어떻게 되나요?", "acceptedAnswer": { "@type": "Answer", "text": "5km를 쉬지 않고 완주할 수 있는 분을 대상으로 합니다. 6:00/7:00 페이스 그룹 중 더 가까운 쪽으로 매칭되어 오버페이스 없이 달릴 수 있습니다." } }
+          ]
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

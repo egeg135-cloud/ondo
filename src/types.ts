@@ -4,7 +4,7 @@ export type Gender = '남' | '여'
 export type Pace = 'A' | 'B' | 'C' | 'D'
 export type Place = '반포' | '여의도'
 export type SlotStatus = 'open' | 'closed' | 'confirmed'
-export type ApplicationStatus = 'applied' | 'confirmed' | 'cancelled'
+export type ApplicationStatus = 'applied' | 'confirmed' | 'cancelled' | 'failed'
 
 export interface User {
   id: string
@@ -26,7 +26,24 @@ export const RUN_PURPOSES: { code: string; label: string }[] = [
   { code: 'steady', label: '꾸준히 건강관리' },
 ]
 
-// 이용권 (v3.1) — 회권/시즌권
+// 입금 계좌 (성공 오버레이 · 카톡 안내 공용 — 여기 한 곳만 수정)
+export const BANK = {
+  bank: '카카오뱅크',
+  number: '3333-37-0096737',
+  holder: '김무관',
+} as const
+
+// 노쇼 방지 보증금 (무료화 후 유일한 금액 — 이월형)
+export const DEPOSIT = {
+  amount: '10,000원',
+  rules: [
+    '참석하면 다음 주로 자동 이월 — 다시 낼 필요 없어요',
+    '노쇼 시에만 소멸돼요',
+    '그만둘 땐 언제든 전액 환급',
+  ],
+} as const
+
+// 이용권 (무료화: 단일 플랜, 가격 대신 보증금 안내)
 export const PLANS: {
   code: string
   label: string
@@ -35,14 +52,12 @@ export const PLANS: {
   desc: string
   badge?: string
 }[] = [
-  { code: 'single', label: '회권', price: '5,000원', desc: '딱 한 번, 가볍게 시작해볼게요' },
   {
-    code: 'season',
-    label: '4주 완주 시즌권',
-    price: '10,000원',
-    originalPrice: '20,000원',
-    desc: '4주 매주 매칭 · 회당 2,500원',
-    badge: '50% 한정 혜택',
+    code: 'single',
+    label: '이번 주 참여',
+    price: '무료',
+    originalPrice: '5,000원',
+    desc: `보증금 ${DEPOSIT.amount} — 참석하면 다음 주로 이월, 그만둘 땐 전액 환급.`,
   },
 ]
 
@@ -86,12 +101,12 @@ export interface Application {
   created_at: string
 }
 
-// ───────────────────────── 페이스 기준 (파일럿: 6:30 / 7:30 두 그룹만) ─────────────────────────
+// ───────────────────────── 페이스 기준 (파일럿: 6:00 / 7:00 두 그룹만) ─────────────────────────
 // 페이스 = 1km당 분:초. DB(users.pace)는 A~D 제약이라 코드로 저장하고 표시만 숫자로.
 //   6:00 → 'C' ,  7:00 → 'B'
-export const PACE_PICK: { code: Pace; label: string; desc: string }[] = [
-  { code: 'C', label: '6:00', desc: '1km를 6분 페이스로 — 이미 꾸준히 뛰는 분' },
-  { code: 'B', label: '7:00', desc: '1km를 7분 페이스로 — 가볍게 완주 가능한 분' },
+export const PACE_PICK: { code: Pace; label: string; range: string; desc: string }[] = [
+  { code: 'C', label: '6분 페이스', range: '약 5:30~6:30 /km', desc: '이미 꾸준히 뛰는 분' },
+  { code: 'B', label: '7분 페이스', range: '약 6:30~7:30 /km', desc: '가볍게 완주 가능한 분' },
 ]
 
 const PACE_NUM: Record<string, string> = {
@@ -110,6 +125,18 @@ export function paceText(p: string | null | undefined): string {
 }
 
 export const PACE_ORDER: Record<Pace, number> = { A: 0, B: 1, C: 2, D: 3 }
+
+// 매칭확정 · 소통 기능 (v3.2)
+export interface SessionInfo {
+  sessionDate: string
+  noticeText: string | null
+  openChatUrl: string | null
+}
+export interface PaceBreakdown {
+  pace: string
+  label: string
+  count: number
+}
 
 // 장소별 집합지 안내 (파일럿: 여의도 · 반포 두 거점)
 export const PLACE_INFO: Record<Place, { point: string; map: string }> = {

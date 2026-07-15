@@ -1,19 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   adminListApplications,
-  assignSlot,
-  createSlot,
-  deleteSlot,
-  getAllSlots,
+  adminListLeads,
+  adminSetPaceVerified,
+  adminSetSessionNotice,
+  getConfirmedSessionStats,
+  getSessionInfo,
   updateApplication,
   type AdminApplication,
+  type Lead,
 } from './lib/api'
-import { formatDateLabel } from './lib/dates'
-import { buildNotice } from './lib/notice'
+import {
+  buildDayBeforeReminder,
+  buildLeadReminder,
+  buildNotice,
+  buildPaymentReminder,
+  buildRefundNotice,
+  buildRejoinMessage,
+  type LeadReminderVariant,
+} from './lib/notice'
+import { formatDateLabel, getUpcomingSessionDate } from './lib/dates'
 import { paceText, planText, purposeText } from './types'
-import type { Place, Slot } from './types'
+import type { PaceBreakdown, SessionInfo } from './types'
 
-const PLACES: Place[] = ['여의도']
+type Filter = 'all' | 'unpaid' | 'single' | 'season'
 
 function getKeyFromUrl(): string {
   return new URLSearchParams(window.location.search).get('key') ?? ''
@@ -22,42 +32,28 @@ function getKeyFromUrl(): string {
 const STATUS_KO: Record<string, string> = {
   applied: '신청접수',
   confirmed: '매칭확정',
+  failed: '매칭실패',
   cancelled: '취소',
 }
 
-// 신청자 목록을 CSV(엑셀)로 내려받기. 엑셀 한글 깨짐 방지용 BOM 포함.
-function exportApplicantsCsv(apps: AdminApplication[]) {
+function exportCsv(apps: AdminApplication[]) {
   const headers = [
-    '이름', '연락처', '페이스', '성별', '나이', 'MBTI', '신규/재참여',
-    '이용권', '러닝목적', '5km가능', '기록인증', '마케팅동의',
-    '상태', '입금', '초대', '슬롯날짜', '슬롯장소',
-    '희망날짜', '신청일시',
+    '이름', '연락처', '페이스', '성별', '나이', 'MBTI', '미가입',
+    '이용권', '러닝목적', '5km가능', '기록인증', '추천코드', '마케팅동의',
+    '상태', '보증금', '초대', '신청일시',
   ]
-  const cell = (v: unknown) => {
-    const s = v == null ? '' : String(v)
-    return `"${s.replace(/"/g, '""')}"`
-  }
+  const cell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
   const rows = apps.map((a) => [
-    a.user_name,
-    a.user_phone,
-    paceText(a.user_pace),
-    a.user_gender ?? '',
-    a.user_age_range ?? '',
-    a.user_mbti ?? '',
-    a.user_total_count > 0 || a.prior_participations > 0
-      ? `재참여(${a.prior_participations || a.user_total_count}회)`
-      : '신규',
-    planText(a.plan),
-    purposeText(a.run_purpose),
+    a.user_name, a.user_phone, paceText(a.user_pace),
+    a.user_gender ?? '', a.user_age_range ?? '', a.user_mbti ?? '',
+    a.is_guest ? 'O' : '',
+    planText(a.plan), purposeText(a.run_purpose),
     a.can_run_5k === true ? 'O' : a.can_run_5k === false ? 'X' : '',
     a.record_proof ?? '',
+    (a as AdminApplication & { referral_code?: string }).referral_code ?? '',
     a.user_marketing_consent ? 'O' : '',
     STATUS_KO[a.status] ?? a.status,
-    a.paid ? 'O' : '',
-    a.invited ? 'O' : '',
-    a.slot_date ?? '',
-    a.slot_place ?? '',
-    (a.wish_dates ?? []).slice().sort().join(' '),
+    a.paid ? 'O' : '', a.invited ? 'O' : '',
     new Date(a.created_at).toLocaleString('ko-KR'),
   ])
   const csv = [headers, ...rows].map((r) => r.map(cell).join(',')).join('\r\n')
@@ -70,23 +66,19 @@ function exportApplicantsCsv(apps: AdminApplication[]) {
   URL.revokeObjectURL(url)
 }
 
-interface SlotGroup {
-  slotId: string
-  date: string | null
-  place: Place | null
-  paceLabel: string | null
-  max: number | null
-  apps: AdminApplication[]
-}
-
 export default function AdminApp() {
   const [key, setKey] = useState(getKeyFromUrl())
   const [keyInput, setKeyInput] = useState('')
   const [apps, setApps] = useState<AdminApplication[] | null>(null)
-  const [slots, setSlots] = useState<Slot[]>([])
   const [loading, setLoading] = useState(false)
   const [authFailed, setAuthFailed] = useState(false)
   const [error, setError] = useState('')
+  const [filter, setFilter] = useState<Filter>('all')
+
+  const sessionDate = getUpcomingSessionDate()
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null)
+  const [sessionStats, setSessionStats] = useState<PaceBreakdown[]>([])
+  const [leads, setLeads] = useState<Lead[]>([])
 
   async function load(k: string) {
     if (!k) return
@@ -94,9 +86,7 @@ export default function AdminApp() {
     setError('')
     setAuthFailed(false)
     try {
-      const [a, s] = await Promise.all([adminListApplications(k), getAllSlots()])
-      setApps(a)
-      setSlots(s)
+      setApps(await adminListApplications(k))
     } catch (e) {
       if (e instanceof Error && e.message === 'UNAUTHORIZED') setAuthFailed(true)
       else setError(e instanceof Error ? e.message : '오류가 발생했어요.')
@@ -106,39 +96,39 @@ export default function AdminApp() {
     }
   }
 
+  async function loadSession() {
+    const [info, stats, leadList] = await Promise.all([
+      getSessionInfo(sessionDate),
+      getConfirmedSessionStats(sessionDate),
+      adminListLeads(key),
+    ])
+    setSessionInfo(info)
+    setSessionStats(stats)
+    setLeads(leadList)
+  }
+
   useEffect(() => {
-    if (key) void load(key)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (key) { void load(key); void loadSession() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { slotGroups, generalApps } = useMemo(() => {
-    const active = (apps ?? []).filter((a) => a.status !== 'cancelled')
-    // 모든 슬롯으로 그룹을 먼저 만든다 (신청 0명인 빈 슬롯도 보이도록)
-    const map = new Map<string, SlotGroup>()
-    for (const s of slots) {
-      map.set(s.id, {
-        slotId: s.id,
-        date: s.date,
-        place: s.place,
-        paceLabel: s.pace_label,
-        max: s.max_members,
-        apps: [],
-      })
-    }
-    const general: AdminApplication[] = []
-    for (const a of active) {
-      if (!a.slot_id) {
-        general.push(a)
-        continue
-      }
-      map.get(a.slot_id)?.apps.push(a)
-    }
-    const groups = [...map.values()].sort((x, y) => (x.date ?? '').localeCompare(y.date ?? ''))
-    return { slotGroups: groups, generalApps: general }
-  }, [apps, slots])
+  const active = useMemo(() => (apps ?? []).filter((a) => a.status !== 'cancelled'), [apps])
 
-  const reload = () => void load(key)
-  const openSlots = slots.filter((s) => s.status === 'open')
+  const filtered = useMemo(() => {
+    if (filter === 'unpaid') return active.filter((a) => !a.paid)
+    if (filter === 'single') return active.filter((a) => a.plan === 'single')
+    if (filter === 'season') return active.filter((a) => a.plan === 'season')
+    return active
+  }, [active, filter])
+
+  const summary = useMemo(() => ({
+    total: active.length,
+    paid: active.filter((a) => a.paid).length,
+    single: active.filter((a) => a.plan === 'single').length,
+    season: active.filter((a) => a.plan === 'season').length,
+  }), [active])
+
+  const reload = () => { void load(key); void loadSession() }
 
   if (!key || authFailed) {
     return (
@@ -147,23 +137,19 @@ export default function AdminApp() {
           <p className="text-sm tracking-[0.3em] text-sand font-semibold">ONDO ADMIN</p>
           <h1 className="text-xl font-bold text-navy">운영자 전용</h1>
           {authFailed && (
-            <p className="text-sm text-rose-600 bg-rose-50 rounded-lg px-3 py-2">
-              키가 올바르지 않아요.
-            </p>
+            <p className="text-sm text-rose-600 bg-rose-50 rounded-lg px-3 py-2">키가 올바르지 않아요.</p>
           )}
           <input
             type="password"
             value={keyInput}
             onChange={(e) => setKeyInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (setKey(keyInput), load(keyInput))}
             placeholder="운영자 키 입력"
             className="w-full rounded-xl border border-navy/15 bg-white px-4 py-3 text-navy focus:outline-none focus:border-navy/50"
           />
           <button
             type="button"
-            onClick={() => {
-              setKey(keyInput)
-              void load(keyInput)
-            }}
+            onClick={() => { setKey(keyInput); void load(keyInput) }}
             className="w-full rounded-2xl bg-navy text-white font-bold py-3"
           >
             들어가기
@@ -175,7 +161,9 @@ export default function AdminApp() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-2xl mx-auto px-5 py-8 space-y-8">
+      <div className="max-w-2xl mx-auto px-5 py-8 space-y-6">
+
+        {/* 헤더 */}
         <header className="flex items-center justify-between">
           <div>
             <p className="text-xs tracking-[0.25em] text-sand font-semibold">ONDO ADMIN</p>
@@ -184,7 +172,7 @@ export default function AdminApp() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => exportApplicantsCsv(apps ?? [])}
+              onClick={() => exportCsv(apps ?? [])}
               disabled={!apps || apps.length === 0}
               className="text-sm font-semibold text-navy underline underline-offset-2 disabled:text-navy/30 disabled:no-underline"
             >
@@ -198,336 +186,70 @@ export default function AdminApp() {
 
         {error && <p className="text-sm text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{error}</p>}
 
-        {/* 슬롯 생성 */}
-        <SlotCreateForm adminKey={key} onCreated={reload} />
+        {/* 이번 주 세션 관리 */}
+        <SessionManagerCard
+          adminKey={key}
+          sessionDate={sessionDate}
+          info={sessionInfo}
+          stats={sessionStats}
+          onSaved={() => void loadSession()}
+        />
 
-        {loading && <p className="text-sm text-navy/50">불러오는 중…</p>}
+        {/* 리드 (팝업 수집 전화번호) */}
+        <LeadsCard leads={leads} apps={apps ?? []} />
 
-        {/* 모임별 신청자 */}
-        <section className="space-y-4">
-          <h2 className="font-bold text-navy">모임별 신청자</h2>
-          {slotGroups.length === 0 ? (
-            <p className="text-sm text-navy/50">아직 슬롯에 들어온 신청이 없어요.</p>
-          ) : (
-            slotGroups.map((g) => (
-              <SlotGroupCard key={g.slotId} group={g} adminKey={key} onChange={reload} />
-            ))
-          )}
-        </section>
-
-        {/* 일반 신청 */}
-        <section className="space-y-3">
-          <h2 className="font-bold text-navy">일반 신청 (희망 날짜·장소)</h2>
-          {generalApps.length === 0 ? (
-            <p className="text-sm text-navy/50">일반 신청이 없어요.</p>
-          ) : (
-            <div className="space-y-2">
-              {generalApps.map((a) => (
-                <div key={a.application_id} className="rounded-xl bg-white border border-navy/10 p-3">
-                  <ApplicantRow a={a} adminKey={key} onChange={reload} />
-                  <div className="mt-1 text-xs text-navy/55 space-y-0.5">
-                    {a.wish_places_weekday?.length ? <p>평일: {a.wish_places_weekday.join(', ')}</p> : null}
-                    {a.wish_places_weekend?.length ? <p>주말: {a.wish_places_weekend.join(', ')}</p> : null}
-                    {a.wish_dates?.length ? (
-                      <p>날짜: {a.wish_dates.slice().sort().map(formatDateLabel).join(', ')}</p>
-                    ) : null}
-                  </div>
-                  <SlotAssign app={a} adminKey={key} openSlots={openSlots} onChange={reload} />
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-    </div>
-  )
-}
-
-// ───────────────────────── 슬롯 생성 폼 ─────────────────────────
-function SlotCreateForm({ adminKey, onCreated }: { adminKey: string; onCreated: () => void }) {
-  const [date, setDate] = useState('')
-  const [place, setPlace] = useState<Place>('여의도')
-  const [max, setMax] = useState(5)
-  const [paceLabel, setPaceLabel] = useState('B')
-  const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState('')
-
-  async function submit() {
-    if (!date) {
-      setMsg('날짜를 골라주세요.')
-      return
-    }
-    setBusy(true)
-    setMsg('')
-    try {
-      await createSlot(adminKey, { date, place, max_members: max, pace_label: paceLabel })
-      setMsg('슬롯이 생성됐어요.')
-      setDate('')
-      onCreated()
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : '실패했어요.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <section className="rounded-2xl bg-white border border-navy/10 p-4 space-y-3">
-      <h2 className="font-bold text-navy">슬롯(모임) 만들기</h2>
-      <p className="text-xs text-navy/45">
-        같은 날짜·장소로 여러 개 만들 수 있어요(인원 넘치면 새 그룹). 페이스 차이가 크면 분리해서 만드세요.
-      </p>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="text-xs text-navy/60">
-          날짜
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy text-sm"
-          />
-        </label>
-        <label className="text-xs text-navy/60">
-          장소
-          <select
-            value={place}
-            onChange={(e) => setPlace(e.target.value as Place)}
-            className="mt-1 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy text-sm bg-white"
-          >
-            {PLACES.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs text-navy/60">
-          최대 인원
-          <input
-            type="number"
-            min={2}
-            max={10}
-            value={max}
-            onChange={(e) => setMax(Number(e.target.value))}
-            className="mt-1 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy text-sm"
-          />
-        </label>
-        <label className="text-xs text-navy/60">
-          페이스 그룹
-          <select
-            value={paceLabel}
-            onChange={(e) => setPaceLabel(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy text-sm bg-white"
-          >
-            <option value="C">6:00 /km</option>
-            <option value="B">7:00 /km</option>
-          </select>
-        </label>
-      </div>
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy}
-          className="rounded-xl bg-navy text-white font-bold px-5 py-2.5 text-sm disabled:opacity-50"
-        >
-          {busy ? '생성 중…' : '슬롯 만들기'}
-        </button>
-        {msg && <span className="text-xs text-navy/60">{msg}</span>}
-      </div>
-    </section>
-  )
-}
-
-// 일반 신청의 희망(장소/날짜)에 가장 잘 맞는 열린 슬롯 추천
-function recommendSlot(app: AdminApplication, openSlots: Slot[]): Slot | null {
-  const places = new Set([...(app.wish_places_weekday ?? []), ...(app.wish_places_weekend ?? [])])
-  const dates = new Set(app.wish_dates ?? [])
-  const byDate = [...openSlots].sort((a, b) => a.date.localeCompare(b.date))
-  // 1순위: 장소+날짜 둘 다 일치 (가장 가까운 날)
-  const exact = byDate.find((s) => places.has(s.place) && dates.has(s.date))
-  if (exact) return exact
-  // 2순위: 장소만 일치
-  const placeOnly = byDate.find((s) => places.has(s.place))
-  if (placeOnly) return placeOnly
-  return null
-}
-
-// ───────────────────────── 일반 신청 → 슬롯 배정 ─────────────────────────
-function SlotAssign({
-  app,
-  adminKey,
-  openSlots,
-  onChange,
-}: {
-  app: AdminApplication
-  adminKey: string
-  openSlots: Slot[]
-  onChange: () => void
-}) {
-  const [slotId, setSlotId] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  async function assign(targetId: string) {
-    if (!targetId) return
-    setBusy(true)
-    try {
-      await assignSlot(adminKey, app.application_id, targetId)
-      onChange()
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '배정 실패')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  if (openSlots.length === 0) {
-    return <p className="mt-2 text-xs text-navy/40">배정할 열린 슬롯이 없어요. 위에서 먼저 만들어 주세요.</p>
-  }
-
-  const rec = recommendSlot(app, openSlots)
-
-  return (
-    <div className="mt-2 space-y-1.5">
-      {/* 추천 자동 배정 */}
-      {rec && (
-        <button
-          type="button"
-          onClick={() => void assign(rec.id)}
-          disabled={busy}
-          className="w-full rounded-lg bg-sand/20 text-navy text-xs font-semibold px-3 py-2 text-left disabled:opacity-40 hover:bg-sand/30"
-        >
-          ⭐ 추천 배정: {formatDateLabel(rec.date)} · {rec.place} · {paceText(rec.pace_label)} 페이스
-        </button>
-      )}
-      {/* 수동 선택 */}
-      <div className="flex items-center gap-2">
-        <select
-          value={slotId}
-          onChange={(e) => setSlotId(e.target.value)}
-          className="flex-1 rounded-lg border border-navy/15 px-2 py-1.5 text-xs text-navy bg-white"
-        >
-          <option value="">직접 슬롯 선택…</option>
-          {openSlots.map((s) => (
-            <option key={s.id} value={s.id}>
-              {formatDateLabel(s.date)} · {s.place} · {paceText(s.pace_label)} 페이스
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={() => void assign(slotId)}
-          disabled={busy || !slotId}
-          className="shrink-0 rounded-lg bg-navy text-white text-xs font-semibold px-3 py-1.5 disabled:opacity-40"
-        >
-          배정
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ───────────────────────── 슬롯 그룹 카드 ─────────────────────────
-function SlotGroupCard({
-  group,
-  adminKey,
-  onChange,
-}: {
-  group: SlotGroup
-  adminKey: string
-  onChange: () => void
-}) {
-  const [showNotice, setShowNotice] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const warnings = computeWarnings(group)
-
-  async function handleDelete() {
-    if (!confirm(`슬롯을 삭제할까요?\n배정된 신청자(${group.apps.length}명)는 일반 신청으로 이동됩니다.`)) return
-    setDeleting(true)
-    try {
-      await deleteSlot(adminKey, group.slotId)
-      onChange()
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '삭제 실패')
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  return (
-    <div className="rounded-2xl bg-white border border-navy/10 p-4">
-      <div className="flex items-center justify-between">
-        <p className="font-bold text-navy">
-          {group.date ? formatDateLabel(group.date) : '?'} · {group.place}
-          {group.paceLabel ? ` · ${paceText(group.paceLabel)} 페이스` : ''}
-        </p>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-sand font-semibold">
-            {group.apps.length}/{group.max ?? 5}명
-          </span>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-xs font-semibold text-rose-500 hover:text-rose-700 disabled:opacity-40"
-          >
-            {deleting ? '삭제 중…' : '슬롯 삭제'}
-          </button>
-        </div>
-      </div>
-
-      {warnings.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {warnings.map((w) => (
-            <span key={w} className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
-              ⚠️ {w}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {group.apps.length === 0 ? (
-        <p className="mt-3 text-sm text-navy/40">
-          아직 신청자가 없어요. 아래 "일반 신청"에서 이 슬롯에 배정하면 채워져요.
-        </p>
-      ) : (
-        <div className="mt-3 divide-y divide-navy/5">
-          {group.apps.map((a) => (
-            <div key={a.application_id} className="py-2">
-              <ApplicantRow a={a} adminKey={adminKey} onChange={onChange} />
-              <button
-                type="button"
-                onClick={() => void assignSlot(adminKey, a.application_id, null).then(onChange)}
-                className="mt-1 text-[11px] text-navy/40 hover:text-rose-600 underline"
-              >
-                배정 해제
-              </button>
+        {/* 요약 카드 */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: '전체 신청', value: summary.total },
+            { label: '보증금 확인', value: summary.paid },
+            { label: '1회 체험권', value: summary.single },
+            { label: '4주 멤버십', value: summary.season },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl bg-white border border-navy/10 p-3 text-center">
+              <p className="text-2xl font-bold text-navy">{s.value}</p>
+              <p className="text-[11px] text-navy/50 mt-0.5">{s.label}</p>
             </div>
           ))}
         </div>
-      )}
 
-      <div className="mt-3">
-        <button
-          type="button"
-          onClick={() => setShowNotice((v) => !v)}
-          disabled={group.apps.length === 0}
-          className="text-sm font-semibold text-navy underline underline-offset-2 disabled:text-navy/30 disabled:no-underline"
-        >
-          {showNotice ? '카톡 공지 닫기' : '카톡 공지 생성'}
-        </button>
-        {showNotice && group.place && group.date && group.apps.length > 0 && (
-          <div className="mt-2 space-y-2">
-            {group.apps.map((a) => (
-              <NoticeBlock
+        {/* 필터 탭 */}
+        <div className="flex gap-2 flex-wrap">
+          {([
+            ['all', '전체'],
+            ['unpaid', '보증금 전'],
+            ['single', '1회 체험권'],
+            ['season', '4주 멤버십'],
+          ] as [Filter, string][]).map(([f, label]) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={
+                'text-sm font-semibold px-3 py-1.5 rounded-full transition-colors ' +
+                (filter === f ? 'bg-navy text-white' : 'bg-navy/10 text-navy/60')
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* 신청자 목록 */}
+        {loading ? (
+          <p className="text-sm text-navy/50">불러오는 중…</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-navy/50">해당하는 신청자가 없어요.</p>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((a) => (
+              <ApplicantCard
                 key={a.application_id}
-                text={buildNotice({
-                  name: a.user_name,
-                  date: group.date!,
-                  place: group.place!,
-                  plan: a.plan,
-                })}
-                name={a.user_name}
+                a={a}
+                adminKey={key}
+                sessionDate={sessionDate}
+                sessionInfo={sessionInfo}
+                onChange={reload}
               />
             ))}
           </div>
@@ -537,16 +259,439 @@ function SlotGroupCard({
   )
 }
 
+// ───────────────────────── 리드 (팝업 수집 전화번호) ─────────────────────────
+const LEAD_REMINDER_LABELS: Record<LeadReminderVariant, string> = {
+  A: '멘트 A (완료편향)',
+  B: '멘트 B (부드럽게)',
+  C: '멘트 C (마감임박)',
+}
+
+function LeadsCard({ leads, apps }: { leads: Lead[]; apps: AdminApplication[] }) {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [copiedVariant, setCopiedVariant] = useState<LeadReminderVariant | null>(null)
+
+  // 이미 신청까지 간 번호는 제외하고 "미전환 리드"만 강조
+  const appliedPhones = new Set(apps.map((a) => a.user_phone?.replace(/\D/g, '')))
+  const pending = leads.filter((l) => !appliedPhones.has(l.phone.replace(/\D/g, '')))
+
+  async function copyAll() {
+    await navigator.clipboard.writeText(pending.map((l) => l.phone).join('\n'))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  async function copyReminder(variant: LeadReminderVariant) {
+    await navigator.clipboard.writeText(buildLeadReminder(variant))
+    setCopiedVariant(variant)
+    setTimeout(() => setCopiedVariant(null), 1500)
+  }
+
+  if (leads.length === 0) return null
+
+  return (
+    <section className="rounded-2xl bg-white border border-navy/10 p-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between"
+      >
+        <h2 className="font-bold text-navy">
+          팝업 리드 {leads.length}명
+          {pending.length > 0 && (
+            <span className="ml-2 text-xs font-semibold text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
+              미신청 {pending.length}명
+            </span>
+          )}
+        </h2>
+        <span className="text-navy/40 text-sm">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-2">
+          {pending.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => void copyAll()}
+                className="text-xs font-semibold rounded-lg bg-navy text-white px-3 py-1.5"
+              >
+                {copied ? '복사됨 ✓' : `미신청 번호 ${pending.length}개 복사`}
+              </button>
+              {(['A', 'B', 'C'] as LeadReminderVariant[]).map((variant) => (
+                <button
+                  key={variant}
+                  type="button"
+                  onClick={() => void copyReminder(variant)}
+                  className="text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 px-3 py-1.5"
+                >
+                  {copiedVariant === variant ? '복사됨 ✓' : LEAD_REMINDER_LABELS[variant]}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="divide-y divide-navy/5">
+            {leads.map((l) => {
+              const applied = appliedPhones.has(l.phone.replace(/\D/g, ''))
+              return (
+                <div key={l.id} className="py-1.5 flex items-center justify-between text-sm">
+                  <span className={applied ? 'text-navy/40' : 'text-navy font-medium'}>{l.phone}</span>
+                  <span className="text-xs text-navy/35">
+                    {applied ? '신청 완료' : new Date(l.created_at).toLocaleDateString('ko-KR')}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+// ───────────────────────── 이번 주 세션 관리 ─────────────────────────
+function SessionManagerCard({
+  adminKey,
+  sessionDate,
+  info,
+  stats,
+  onSaved,
+}: {
+  adminKey: string
+  sessionDate: string
+  info: SessionInfo | null
+  stats: PaceBreakdown[]
+  onSaved: () => void
+}) {
+  const [noticeText, setNoticeText] = useState(info?.noticeText ?? '')
+  const [openChatUrl, setOpenChatUrl] = useState(info?.openChatUrl ?? '')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setNoticeText(info?.noticeText ?? '')
+    setOpenChatUrl(info?.openChatUrl ?? '')
+  }, [info])
+
+  const total = stats.reduce((sum, p) => sum + p.count, 0)
+
+  async function save() {
+    setSaving(true)
+    setSaved(false)
+    setError('')
+    try {
+      await adminSetSessionNotice(adminKey, sessionDate, noticeText, openChatUrl)
+      onSaved()
+      setSaved(true)
+      setTimeout(() => setSaved(false), 1500)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장에 실패했어요.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="rounded-2xl bg-white border border-navy/10 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold text-navy">이번 주 세션 · {formatDateLabel(sessionDate)}</h2>
+        <span className="text-xs text-navy/50">
+          확정 {total}명
+          {stats.length > 0 && (
+            <span className="text-navy/40">
+              {' '}({stats.map((p) => `${p.label} ${p.count}명`).join(' · ')})
+            </span>
+          )}
+        </span>
+      </div>
+      <textarea
+        value={noticeText}
+        onChange={(e) => setNoticeText(e.target.value)}
+        placeholder="공지사항 (집합장소 변경, 우천 대응 등)"
+        rows={2}
+        className="w-full rounded-lg border border-navy/15 px-3 py-2 text-sm text-navy resize-none"
+      />
+      <input
+        type="text"
+        value={openChatUrl}
+        onChange={(e) => setOpenChatUrl(e.target.value)}
+        placeholder="카카오톡 오픈채팅 링크"
+        className="w-full rounded-lg border border-navy/15 px-3 py-2 text-sm text-navy"
+      />
+      {error && <p className="text-xs text-rose-600">{error}</p>}
+      <button
+        type="button"
+        onClick={() => void save()}
+        disabled={saving}
+        className="rounded-xl bg-navy text-white font-bold px-4 py-2 text-sm disabled:opacity-50"
+      >
+        {saving ? '저장 중…' : saved ? '저장됨 ✓' : '저장'}
+      </button>
+    </section>
+  )
+}
+
+// ───────────────────────── 신청자 카드 ─────────────────────────
+function ApplicantCard({
+  a,
+  adminKey,
+  sessionDate,
+  sessionInfo,
+  onChange,
+}: {
+  a: AdminApplication
+  adminKey: string
+  sessionDate: string
+  sessionInfo: SessionInfo | null
+  onChange: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [showNotice, setShowNotice] = useState(false)
+  const [showReminder, setShowReminder] = useState(false)
+  const [showDayBefore, setShowDayBefore] = useState(false)
+  const [showRejoin, setShowRejoin] = useState(false)
+  const [showRefund, setShowRefund] = useState(false)
+  const isConfirmed = a.status === 'confirmed'
+  const isFailed = a.status === 'failed'
+  const isSeason = a.plan === 'season'
+  const isPaceVerified = a.user_pace_verified === true
+
+  async function togglePaceVerified() {
+    if (!a.user_id) return
+    setBusy(true)
+    try {
+      await adminSetPaceVerified(adminKey, a.user_id, !isPaceVerified)
+      onChange()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '변경 실패')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function patch(p: {
+    paid?: boolean
+    invited?: boolean
+    status?: AdminApplication['status']
+    sessionDate?: string
+  }) {
+    setBusy(true)
+    try {
+      await updateApplication(adminKey, a.application_id, p)
+      onChange()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const referralCode = (a as AdminApplication & { referral_code?: string }).referral_code
+
+  return (
+    <div className="rounded-2xl bg-white border border-navy/10 p-4 space-y-3">
+      {/* 상단: 이름·연락처·이용권 배지 */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-navy text-base">{a.user_name}</span>
+            <span className="text-sm text-navy/50">{a.user_phone}</span>
+            {a.is_guest && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">
+                미가입
+              </span>
+            )}
+            <span className={
+              'text-[11px] font-bold px-2 py-0.5 rounded-full ' +
+              (isSeason ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700')
+            }>
+              {isSeason ? '👑 4주' : '1회'}
+            </span>
+            {isConfirmed && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-navy text-white">확정</span>
+            )}
+            {isFailed && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-600">매칭실패</span>
+            )}
+            {isPaceVerified && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">✓ 기록검증</span>
+            )}
+          </div>
+
+          {/* 세부 정보 */}
+          <p className="text-xs text-navy/55 mt-1">
+            {paceText(a.user_pace)} 페이스 · {a.user_gender ?? '?'} · {a.user_age_range ?? '?'}세
+            {a.user_mbti ? ` · ${a.user_mbti}` : ''}
+          </p>
+          <p className="text-xs text-navy/45 mt-0.5">
+            {purposeText(a.run_purpose) || '목적 미입력'}
+            {a.can_run_5k === false ? ' · ⚠️ 5km 미완주' : ''}
+            {a.record_proof ? ` · 📎 ${a.record_proof}` : ' · 기록 미인증'}
+          </p>
+          {referralCode && (
+            <p className="text-xs text-emerald-600 mt-0.5">🎁 추천코드: {referralCode}</p>
+          )}
+          <p className="text-[11px] text-navy/30 mt-0.5">
+            신청 {new Date(a.created_at).toLocaleString('ko-KR')}
+          </p>
+        </div>
+      </div>
+
+      {/* 액션 버튼 */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <ToggleTag on={a.paid} disabled={busy} onClick={() => patch({ paid: !a.paid })}>
+          보증금
+        </ToggleTag>
+        <ToggleTag on={a.invited} disabled={busy} onClick={() => patch({ invited: !a.invited })}>
+          초대
+        </ToggleTag>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => patch({
+            status: isConfirmed ? 'applied' : 'confirmed',
+            sessionDate: isConfirmed ? undefined : sessionDate,
+          })}
+          className={
+            'text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50 ' +
+            (isConfirmed ? 'bg-navy/10 text-navy/60' : 'bg-navy text-white')
+          }
+        >
+          {isConfirmed ? '확정 해제' : '확정'}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => patch({
+            status: isFailed ? 'applied' : 'failed',
+            sessionDate: isFailed ? undefined : sessionDate,
+          })}
+          className={
+            'text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50 ' +
+            (isFailed ? 'bg-navy/10 text-navy/60' : 'bg-rose-50 text-rose-600')
+          }
+        >
+          {isFailed ? '매칭실패 해제' : '매칭실패'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowNotice((v) => !v)}
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-sand/20 text-navy"
+        >
+          카톡 공지 {showNotice ? '▲' : '▼'}
+        </button>
+        {!a.paid && (
+          <button
+            type="button"
+            onClick={() => setShowReminder((v) => !v)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700"
+          >
+            보증금 리마인드 {showReminder ? '▲' : '▼'}
+          </button>
+        )}
+        {a.paid && (
+          <button
+            type="button"
+            onClick={() => setShowRefund((v) => !v)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700"
+          >
+            무료화 환불 안내 {showRefund ? '▲' : '▼'}
+          </button>
+        )}
+        {isConfirmed && (
+          <button
+            type="button"
+            onClick={() => setShowDayBefore((v) => !v)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700"
+          >
+            전날 리마인드 {showDayBefore ? '▲' : '▼'}
+          </button>
+        )}
+        {isSeason && (
+          <button
+            type="button"
+            onClick={() => setShowRejoin((v) => !v)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700"
+          >
+            재참여 안내 {showRejoin ? '▲' : '▼'}
+          </button>
+        )}
+        {a.user_id && (
+          <ToggleTag on={isPaceVerified} disabled={busy} onClick={() => void togglePaceVerified()}>
+            기록검증
+          </ToggleTag>
+        )}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            if (confirm(`${a.user_name}님 신청을 취소할까요?`)) {
+              void patch({ status: 'cancelled' })
+            }
+          }}
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg text-rose-500 hover:bg-rose-50 disabled:opacity-50"
+        >
+          취소
+        </button>
+      </div>
+
+      {/* 카톡 공지 */}
+      {showNotice && (
+        <NoticeBlock
+          text={buildNotice({
+            name: a.user_name,
+            plan: a.plan,
+            pace: a.user_pace,
+            noticeExtra: sessionInfo?.noticeText,
+            openChatUrl: sessionInfo?.openChatUrl,
+          })}
+          name={a.user_name}
+        />
+      )}
+
+      {/* 보증금 리마인드 */}
+      {showReminder && !a.paid && (
+        <NoticeBlock
+          text={buildPaymentReminder({ name: a.user_name, plan: a.plan })}
+          name={`${a.user_name}님 보증금 리마인드`}
+        />
+      )}
+
+      {/* 무료화 환불 안내 (기존 유료 신청자) */}
+      {showRefund && a.paid && (
+        <NoticeBlock
+          text={buildRefundNotice({ name: a.user_name, plan: a.plan })}
+          name={`${a.user_name}님 환불 안내`}
+        />
+      )}
+
+      {/* 전날 리마인드 (노쇼 방어) */}
+      {showDayBefore && isConfirmed && (
+        <NoticeBlock
+          text={buildDayBeforeReminder({
+            name: a.user_name,
+            pace: a.user_pace,
+            openChatUrl: sessionInfo?.openChatUrl,
+          })}
+          name={`${a.user_name}님 전날 리마인드`}
+        />
+      )}
+
+      {/* 재참여 안내 (4주 멤버십) */}
+      {showRejoin && isSeason && (
+        <NoticeBlock
+          text={buildRejoinMessage({ name: a.user_name })}
+          name={`${a.user_name}님 재참여 안내`}
+        />
+      )}
+    </div>
+  )
+}
+
 function NoticeBlock({ text, name }: { text: string; name: string }) {
   const [copied, setCopied] = useState(false)
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      setCopied(false)
-    }
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
   }
   return (
     <div className="rounded-xl bg-offwhite border border-navy/10 p-3">
@@ -565,87 +710,10 @@ function NoticeBlock({ text, name }: { text: string; name: string }) {
   )
 }
 
-// ───────────────────────── 신청자 행 (토글 포함) ─────────────────────────
-function ApplicantRow({
-  a,
-  adminKey,
-  onChange,
-}: {
-  a: AdminApplication
-  adminKey: string
-  onChange: () => void
-}) {
-  const [busy, setBusy] = useState(false)
-  const isReturning = a.user_total_count > 0 || a.prior_participations > 0
-  const isConfirmed = a.status === 'confirmed'
-
-  async function patch(p: { paid?: boolean; invited?: boolean; status?: AdminApplication['status'] }) {
-    setBusy(true)
-    try {
-      await updateApplication(adminKey, a.application_id, p)
-      onChange()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-navy">{a.user_name}</span>
-          <span className="text-sm text-navy/50">{a.user_phone}</span>
-          {isReturning ? (
-            <Tag className="bg-sand/20 text-sand">재참여 {a.prior_participations || a.user_total_count}회</Tag>
-          ) : (
-            <Tag className="bg-emerald-100 text-emerald-700">신규(무료)</Tag>
-          )}
-          {isConfirmed && <Tag className="bg-navy text-white">확정</Tag>}
-        </div>
-        <p className="text-xs text-navy/55 mt-0.5">
-          {paceText(a.user_pace)} 페이스 · {a.user_gender ?? '?'} · {a.user_age_range ?? '?'}
-          {a.user_mbti ? ` · ${a.user_mbti}` : ''}
-        </p>
-        <p className="text-xs text-navy/45 mt-0.5">
-          {planText(a.plan) || '이용권 미선택'}
-          {a.run_purpose ? ` · ${purposeText(a.run_purpose)}` : ''}
-          {a.can_run_5k === false ? ' · ⚠️5km 미완주' : ''}
-          {a.record_proof ? ` · 📎${a.record_proof}` : ' · 기록 미인증'}
-        </p>
-      </div>
-      <div className="shrink-0 flex items-center gap-1.5">
-        <ToggleTag on={a.paid} disabled={busy} onClick={() => patch({ paid: !a.paid })}>
-          입금
-        </ToggleTag>
-        <ToggleTag on={a.invited} disabled={busy} onClick={() => patch({ invited: !a.invited })}>
-          초대
-        </ToggleTag>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => patch({ status: isConfirmed ? 'applied' : 'confirmed' })}
-          className={
-            'text-xs font-semibold px-2 py-1 rounded-lg disabled:opacity-50 ' +
-            (isConfirmed ? 'bg-navy/10 text-navy/60' : 'bg-navy text-white')
-          }
-        >
-          {isConfirmed ? '확정해제' : '확정'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
 function ToggleTag({
-  on,
-  disabled,
-  onClick,
-  children,
+  on, disabled, onClick, children,
 }: {
-  on: boolean
-  disabled: boolean
-  onClick: () => void
-  children: React.ReactNode
+  on: boolean; disabled: boolean; onClick: () => void; children: React.ReactNode
 }) {
   return (
     <button
@@ -653,31 +721,11 @@ function ToggleTag({
       disabled={disabled}
       onClick={onClick}
       className={
-        'text-xs font-semibold px-2 py-1 rounded-lg disabled:opacity-50 ' +
+        'text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50 ' +
         (on ? 'bg-emerald-100 text-emerald-700' : 'bg-navy/10 text-navy/40')
       }
     >
       {children} {on ? '✓' : '–'}
     </button>
   )
-}
-
-function Tag({ children, className }: { children: React.ReactNode; className: string }) {
-  return <span className={'text-xs font-semibold px-2 py-0.5 rounded-full ' + className}>{children}</span>
-}
-
-// ───────────────────────── 경고 계산 ─────────────────────────
-function computeWarnings(g: SlotGroup): string[] {
-  const w: string[] = []
-  const n = g.apps.length
-  if (n > 0 && n < 3) w.push('3명 미만')
-
-  const females = g.apps.filter((a) => a.user_gender === '여').length
-  if (females === 1 && n > 1) w.push('여성 1명 단독')
-
-  // 6:30 / 7:30 은 섞지 않는다 — 한 슬롯에 서로 다른 페이스가 있으면 경고
-  const distinctPaces = new Set(g.apps.map((a) => a.user_pace).filter(Boolean))
-  if (distinctPaces.size > 1) w.push('페이스 섞임 (6:30/7:30)')
-
-  return w
 }

@@ -1,57 +1,57 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { AnchorTabs } from './components/AnchorTabs'
 import { ApplyModal, ServiceScope, type ApplySuccessInfo } from './components/ApplyModal'
+import { LeadPopup } from './components/LeadPopup'
+import { PaceQuickModal } from './components/PaceQuickModal'
 import { Reviews } from './components/Reviews'
 import { Faq } from './components/Faq'
-import { SeoJsonLd } from './components/SeoJsonLd'
 import { MyApplicationsModal } from './components/MyApplicationsModal'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
 import { useSession } from './lib/auth'
-import {
-  EVENT_GOAL_COUNT,
-  clearPendingApplication,
-  getPendingApplication,
-  getUsersCount,
-  submitApplication,
-} from './lib/api'
-import { subscribeToApplications } from './lib/realtime'
+import { claimGuestApplications } from './lib/api'
+import { getLastPhone } from './lib/format'
+import { shareMatchCard } from './lib/shareCard'
 import { HERO_VARIANTS, pickHeroVariant } from './constants/content'
 import { analytics } from './lib/analytics'
+import { BANK, DEPOSIT } from './types'
+import type { Pace } from './types'
 
-// 랜딩 카운터 표시용 베이스라인 (실제 DB 신청 수에 더해서 보여줌 — 운영자/엑셀엔 영향 없음).
-const DISPLAY_BASE_COUNT = 157
-
-// 이번 주 목요일까지 남은 일수 (마감 D-day 표시용)
-function daysToNextThursday(): number {
-  const day = new Date().getDay() // 0=일 … 4=목 … 6=토
-  return (4 - day + 7) % 7
+// 모집 마감은 수요일 23:59 하나로 통일. 목요일은 러닝 당일.
+function deadlineLabel(): string {
+  const day = new Date().getDay() // 0=일 … 3=수 … 4=목
+  if (day === 4) return '오늘은 러닝 데이 · 다음 주 신청 받는 중'
+  const dday = (3 - day + 7) % 7
+  return dday === 0 ? '오늘 밤 11:59 모집 마감' : `이번 주 모집 마감 D-${dday}`
 }
 
 function App() {
-  const [memberCount, setMemberCount] = useState(0)
   const [variant] = useState(pickHeroVariant)
   const hero = HERO_VARIANTS[variant]
 
   const [modalOpen, setModalOpen] = useState(false)
   const [success, setSuccess] = useState<ApplySuccessInfo | null>(null)
   const [myAppsOpen, setMyAppsOpen] = useState(false)
+  const [leadPopup, setLeadPopup] = useState(false)
+  const [paceModalOpen, setPaceModalOpen] = useState(false)
+  const [selectedPace, setSelectedPace] = useState<Pace | null>(null)
+  const [copied, setCopied] = useState(false)
   const { session } = useSession()
 
-  const refresh = useCallback(async () => {
-    setMemberCount(await getUsersCount())
+  // 재참여 원클릭 링크 (?apply=1) — 문자/카톡 링크로 진입 시 바로 신청 모달
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('apply') === '1') {
+      analytics.modalOpen()
+      setModalOpen(true)
+      // 주소창 정리 (새로고침 시 재오픈 방지)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }, [])
 
+  // 퍼널 추적: A/B 노출 + 스크롤 깊이 + exit intent
+  // (page_view는 gtag config가 자동 집계 — 수동 호출 시 이중 집계됨)
   useEffect(() => {
-    void refresh()
-    const unsubscribe = subscribeToApplications(() => {
-      void refresh()
-    })
-    return unsubscribe
-  }, [refresh])
-
-  // 퍼널 추적: page_view + A/B 노출 + 스크롤 깊이 + exit intent
-  useEffect(() => {
-    analytics.pageView()
     analytics.experimentView('hero_copy', variant)
 
     const fired = new Set<number>()
@@ -70,6 +70,10 @@ function App() {
       if (exited) return
       exited = true
       analytics.exitIntent()
+      // 이탈 시점에 전화번호 수집 팝업 (첫 방문 + 일반 진입일 때만)
+      const seen = localStorage.getItem('ondo_lead_seen')
+      const isApplyLink = new URLSearchParams(window.location.search).get('apply') === '1'
+      if (!seen && !isApplyLink) setLeadPopup(true)
     }
     const onMouseOut = (e: MouseEvent) => {
       if (e.clientY <= 0) onExit()
@@ -87,42 +91,45 @@ function App() {
     }
   }, [variant])
 
-  // 카카오 로그인 후 복귀 → 저장해둔 신청을 자동 제출
+  // 카카오 로그인 완료 시 → 같은 번호로 신청했던 게스트 신청을 내 계정에 자동 연결
   useEffect(() => {
     if (!session) return
-    const pending = getPendingApplication()
-    if (!pending) return
-    clearPendingApplication()
-    submitApplication(pending)
-      .then(({ applicationId }) => {
-        analytics.applicationComplete({ plan: pending.plan })
-        analytics.paymentStart()
-        setSuccess({ applicationId, phone: pending.phone, name: pending.name, plan: pending.plan ?? null })
-        void refresh()
-      })
-      .catch((e) => console.error('[ONDO] 로그인 후 자동제출 실패:', e))
-  }, [session, refresh])
+    const phone = getLastPhone()
+    if (!phone) return
+    void claimGuestApplications(phone)
+  }, [session])
 
+  function openPaceModal() {
+    setPaceModalOpen(true)
+  }
   function openGeneral() {
     analytics.modalOpen()
     setModalOpen(true)
   }
+  function handlePaceConfirm(pace: Pace) {
+    setSelectedPace(pace)
+    setPaceModalOpen(false)
+    openGeneral()
+  }
   function handleSuccess(info: ApplySuccessInfo) {
     analytics.applicationComplete()
-    analytics.paymentStart()
+    analytics.depositStart()
     setModalOpen(false)
     setSuccess(info)
-    void refresh()
   }
 
-  const shownCount = memberCount + DISPLAY_BASE_COUNT
-  const progress = Math.min(100, Math.round((shownCount / EVENT_GOAL_COUNT) * 100))
-  const dday = daysToNextThursday()
-  const ddayLabel = dday === 0 ? '오늘 저녁 8시 마감' : `이번 주 목요일 마감 D-${dday}`
+  function copyAccount() {
+    void navigator.clipboard.writeText(BANK.number).then(() => {
+      analytics.depositCopyAccount()
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  const ddayLabel = deadlineLabel()
 
   return (
     <div className="min-h-screen bg-black flex justify-center">
-      <SeoJsonLd />
       <Navbar session={session} onMyApps={() => setMyAppsOpen(true)} />
 
       <div className="w-full max-w-[550px] bg-white flex flex-col">
@@ -138,18 +145,10 @@ function App() {
         >
           <div className="absolute inset-0 bg-black/45" />
 
-          <div className="relative z-10 w-full px-4 pb-10 pt-14">
-            <p className="ml-1 text-xs tracking-[0.5em] text-white/60 font-extralight uppercase">ONDO</p>
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {hero.badges.map((t) => (
-                <span
-                  key={t}
-                  className="rounded-full bg-black text-white text-xs font-semibold px-3 py-1.5 border border-white/15"
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
+          <div className="relative z-10 w-full px-4 pb-10 pt-[calc(3.5rem+1.75rem)]">
+            <span className="inline-block rounded-full bg-black text-white text-xs font-semibold px-3 py-1.5 border border-white/15">
+퇴근 후 러닝 루틴 서비스, ONDO
+            </span>
             <h1 className="mt-4 text-3xl font-bold text-white leading-snug">
               {hero.title.map((line, i) => (
                 <span key={i}>
@@ -158,7 +157,7 @@ function App() {
                 </span>
               ))}
             </h1>
-            <div className="mt-3 text-sm text-white/70 leading-relaxed space-y-3">
+            <div className="mt-3 text-sm text-white/70 leading-relaxed space-y-1.5">
               {hero.subtitle.map((para, pi) => (
                 <p key={pi}>
                   {para.map((line, li) => (
@@ -171,54 +170,43 @@ function App() {
               ))}
             </div>
 
-            {/* 이벤트 배너 */}
-            <div className="mt-6">
-              <p className="text-xs tracking-wide text-white/50 font-medium">
-                🏃‍♂️ 현재 {shownCount.toLocaleString()}명 탑승 완료
-              </p>
-              <p className="mt-2 text-3xl font-bold text-white">
-                {shownCount.toLocaleString()}
-                <span className="text-base font-normal text-white/60">
-                  {' '}/ {EVENT_GOAL_COUNT.toLocaleString()}명 참여
-                </span>
-              </p>
-              <div className="mt-3 h-0.5 rounded-full bg-white/20 overflow-hidden">
-                <div className="h-full bg-white transition-all duration-500" style={{ width: `${progress}%` }} />
-              </div>
-            </div>
-
-            {/* 마감 배지 + 메인 CTA */}
-            <div className="mt-6">
+            {/* 메인 CTA — 모바일은 하단 sticky 버튼이 대신하므로 데스크탑에서만 노출 */}
+            <div className="mt-6 hidden md:block">
               <button
                 type="button"
                 onClick={() => {
                   analytics.heroCtaClick()
-                  openGeneral()
+                  openPaceModal()
                 }}
-                className="mt-2.5 w-full rounded-2xl bg-white text-gray-900 font-bold py-4 text-base shadow-lg active:scale-[0.99] transition-transform"
+                className="w-full rounded-2xl bg-[#FF5A1F] text-white font-bold py-4 text-base shadow-lg active:scale-[0.99] transition-transform"
               >
                 {hero.cta}
               </button>
-              <p className="mt-2 text-center text-xs text-white/50">
-                (번거로운 회원가입 절차를 싹 뺐어요!)
-              </p>
             </div>
           </div>
         </section>
 
+        {/* 이번 주 일정 띠 */}
+        <div className="bg-gray-900 text-sm text-gray-300 py-2 text-center px-4">
+          이번 주 목요일 20:00 · 여의도 한강 5km · 수요일 23:59 마감
+        </div>
+
         <div className="flex-1 mx-4 pb-24">
+          {/* 스티키 앵커 탭 */}
+          <AnchorTabs />
+
           {/* GEO 한 문장 정의 (AI 인용 친화) */}
-          <section className="mt-12">
+          <section id="intro" className="mt-12 scroll-mt-32">
             <p className="text-base text-gray-900 leading-relaxed">
-              <strong className="font-bold">ONDO</strong>는 서울 직장인을 위한{' '}
-              <strong className="font-semibold">3~5인 소규모 러닝메이트 매칭 서비스</strong>입니다.
+              <strong className="font-bold">ONDO</strong>는 혼자 뛰던 직장인이{' '}
+              <strong className="font-semibold">매주 함께 뛰는 러닝 루틴을 만드는 러닝 메이트 매칭 서비스</strong>입니다.
               <br />
-              매주 목요일 저녁 8시 여의도 한강에서 비슷한 페이스의 러너를 연결합니다.
+              매주 목요일 저녁 8시 여의도 한강에서 나와 비슷한 페이스의 러너 3~5명과 5km를 달립니다.
             </p>
           </section>
 
           {/* 후기 · 로드맵 · 이유 · FOMO */}
-          <Reviews onApply={openGeneral} ddayLabel={ddayLabel} />
+          <Reviews onApply={openPaceModal} ddayLabel={ddayLabel} />
 
           {/* 서비스 범위 안내 */}
           <section className="mt-14">
@@ -245,23 +233,47 @@ function App() {
           >
             <p className="text-3xl">🎉</p>
             <p className="mt-2 mb-1 font-bold text-gray-900 text-xl">신청 완료!</p>
-            <p className="text-sm text-gray-500">아래 계좌로 입금하시면 매칭이 시작돼요.</p>
+            <p className="text-sm text-gray-500">
+              아래 계좌로 보증금 {DEPOSIT.amount}을 보내면 매칭 명단에 올라가요.
+            </p>
 
-            {/* 입금 안내 */}
+            {/* 보증금 안내 */}
             <div className="mt-4 rounded-2xl bg-[#F5F5F5] p-4 text-left">
               <p className="text-sm font-bold text-gray-900">
-                💳 {success.plan === 'season' ? '10,000원' : '5,000원'} 입금
-                <span className="ml-1.5 text-xs font-normal text-gray-400">
-                  ({success.plan === 'season' ? '4주 시즌권' : '1회권'})
-                </span>
+                🔒 보증금 {DEPOSIT.amount}
+                <span className="ml-1.5 text-xs font-normal text-gray-400">(참가비는 무료)</span>
               </p>
-              <p className="mt-2 text-sm font-bold text-gray-900">카카오뱅크 3333-37-0096737</p>
-              <p className="mt-1 text-sm text-gray-600">예금주: 김무관</p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <p className="text-sm font-bold text-gray-900">
+                  {BANK.bank} {BANK.number}
+                </p>
+                <button
+                  type="button"
+                  onClick={copyAccount}
+                  className={
+                    'shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-colors ' +
+                    (copied ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-900 text-white')
+                  }
+                >
+                  {copied ? '복사됨 ✓' : '계좌 복사'}
+                </button>
+              </div>
+              <p className="mt-1 text-sm text-gray-600">예금주: {BANK.holder}</p>
               <p className="mt-1 text-sm text-gray-600">
                 입금자명: <span className="font-semibold text-gray-900">{success.name}</span>
               </p>
+              <ul className="mt-3 space-y-1 border-t border-gray-200 pt-3">
+                {DEPOSIT.rules.map((r) => (
+                  <li key={r} className="flex gap-1.5 text-xs text-gray-500">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p className="mt-2 text-xs text-gray-400">매칭이 확정되면 카톡으로 안내드릴게요.</p>
+            <p className="mt-2 text-xs text-gray-400">
+              수요일 23:59까지 입금 시 확정 · 매칭 결과는 카톡으로 안내드릴게요.
+            </p>
 
             <button
               type="button"
@@ -269,6 +281,13 @@ function App() {
               className="mt-4 w-full rounded-2xl bg-gray-900 text-white font-bold py-3"
             >
               확인
+            </button>
+            <button
+              type="button"
+              onClick={() => void shareMatchCard(success.name)}
+              className="mt-2 w-full rounded-2xl bg-gray-100 text-gray-700 font-bold py-3"
+            >
+              📸 스토리에 자랑하기
             </button>
             <button
               type="button"
@@ -284,9 +303,44 @@ function App() {
         </div>
       )}
 
-      <ApplyModal open={modalOpen} slot={null} onClose={() => setModalOpen(false)} onSuccess={handleSuccess} />
+      <ApplyModal
+        open={modalOpen}
+        slot={null}
+        onClose={() => setModalOpen(false)}
+        onSuccess={handleSuccess}
+        initialPace={selectedPace}
+      />
+
+      <PaceQuickModal
+        open={paceModalOpen}
+        onClose={() => setPaceModalOpen(false)}
+        onConfirm={handlePaceConfirm}
+      />
+
+      {leadPopup && (
+        <LeadPopup
+          onClose={() => setLeadPopup(false)}
+          onApply={() => { setLeadPopup(false); openPaceModal() }}
+        />
+      )}
 
       <MyApplicationsModal open={myAppsOpen} onClose={() => setMyAppsOpen(false)} />
+
+      {/* 모바일 sticky bottom CTA */}
+      {!modalOpen && !paceModalOpen && !success && !leadPopup && (
+        <div className="fixed bottom-0 left-0 w-full md:hidden z-30 px-4 pb-4 pt-3 bg-gradient-to-t from-black/80 to-transparent">
+          <button
+            type="button"
+            onClick={() => {
+              analytics.heroCtaClick()
+              openPaceModal()
+            }}
+            className="w-full rounded-2xl bg-[#FF5A1F] text-white font-bold py-4 text-base shadow-lg active:scale-[0.99] transition-transform"
+          >
+            {hero.cta}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

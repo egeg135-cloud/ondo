@@ -63,8 +63,9 @@ const DUMMY_APPS: Array<{
 ]
 
 const STATUS_STYLE: Record<ApplicationStatus, { label: string; cls: string }> = {
-  applied:   { label: '신청 접수', cls: 'bg-gray-200 text-gray-700' },
-  confirmed: { label: '매칭 확정', cls: 'bg-gray-900 text-white' },
+  applied:   { label: '대기중',   cls: 'bg-gray-200 text-gray-700' },
+  confirmed: { label: '확정',     cls: 'bg-gray-900 text-white' },
+  failed:    { label: '매칭실패', cls: 'bg-rose-100 text-rose-600' },
   cancelled: { label: '취소됨',   cls: 'bg-gray-100 text-gray-400' },
 }
 

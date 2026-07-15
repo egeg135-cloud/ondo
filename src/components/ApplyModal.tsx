@@ -1,23 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Chip } from './Chip'
-import { Calendar } from './Calendar'
-import { PACE_PICK, PLANS, POLICY, RUN_PURPOSES } from '../types'
+import { DEPOSIT, PACE_PICK, PLANS, POLICY, RUN_PURPOSES } from '../types'
 import type { Gender, Pace, Slot } from '../types'
-import { formatDateLabel, getNextThursdays } from '../lib/dates'
+import { getNextThursdays } from '../lib/dates'
 import { formatPhoneInput, getLastPhone, isValidPhone, saveLastPhone } from '../lib/format'
-import {
-  FriendlyError,
-  getMyProfile,
-  savePendingApplication,
-  submitApplication,
-  type ApplicationForm,
-} from '../lib/api'
-import { signInWithKakao, useSession } from '../lib/auth'
+import { FriendlyError, getMyProfile, submitApplication, type ApplicationForm } from '../lib/api'
+import { useSession } from '../lib/auth'
 import { analytics } from '../lib/analytics'
 
 const GENDERS: Gender[] = ['남', '여']
 const FIXED_PLACE = '여의도' as const
 const TOTAL_STEPS = 5
+const STEP_NAMES = ['연락처', '기본정보', '페이스', '참가안내', '동의'] as const
 
 export interface ApplySuccessInfo {
   applicationId: string
@@ -31,9 +25,10 @@ interface ApplyModalProps {
   onClose: () => void
   slot?: Slot | null // (미사용) 호환용
   onSuccess: (info: ApplySuccessInfo) => void
+  initialPace?: Pace | null // 페이스 빠른 선택 모달에서 넘어온 값
 }
 
-export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
+export function ApplyModal({ open, onClose, onSuccess, initialPace }: ApplyModalProps) {
   const { session } = useSession()
 
   const [step, setStep] = useState(0)
@@ -48,7 +43,7 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
   const [dates, setDates] = useState<string[]>([])
   const [plan, setPlan] = useState<string | null>(null)
   const [recordProof, setRecordProof] = useState('')
-  const [referralCode, setReferralCode] = useState('')
+  const [ageGap, setAgeGap] = useState(7)
 
   const [agreeTerms, setAgreeTerms] = useState(false)
   const [agreePrivacy, setAgreePrivacy] = useState(false)
@@ -65,10 +60,15 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
       setAskMarketing(false)
       const last = getLastPhone()
       if (last) setPhone(last)
+      // 페이스 빠른 선택 모달에서 넘어온 값을 최우선으로 반영
+      if (initialPace) setPace(initialPace)
+      // 무료화: 단일 플랜 자동 선택 (다음 목요일 1회)
+      setPlan('single')
+      setDates(getNextThursdays(1))
       void prefill()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }, [open, initialPace])
 
   async function prefill() {
     const user = await getMyProfile()
@@ -77,11 +77,11 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
     if (user.phone) setPhone(user.phone)
     if (user.gender) setGender(user.gender)
     if (user.age_range) setAgeRange(user.age_range)
-    if (user.pace) setPace(user.pace)
+    if (user.pace && !initialPace) setPace(user.pace)
     if (user.marketing_consent) setAgreeMarketing(true)
   }
 
-  const ageValid = !!ageRange && /^\d{1,2}$/.test(ageRange.trim())
+  const ageValid = !!ageRange && /^\d{1,2}$/.test(ageRange.trim()) && Number(ageRange) >= 20
 
   // 각 단계 진행 가능 여부
   function stepValid(s: number): boolean {
@@ -93,20 +93,12 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
       case 2:
         return !!pace && canRun5k !== null && !!runPurpose
       case 3:
-        return !!plan && dates.length > 0
+        return !!plan
       case 4:
         return agreeTerms && agreePrivacy
       default:
         return true
     }
-  }
-
-  // 이용권 선택 — 시즌권이면 다음 4주 목요일 자동 선택, 회권이면 직접 고르게 비움
-  function choosePlan(code: string) {
-    setPlan(code)
-    analytics.planSelect(code === 'season' ? 'season' : 'single')
-    if (code === 'season') setDates(getNextThursdays(4))
-    else setDates([])
   }
 
   function buildForm(marketing: boolean): ApplicationForm {
@@ -125,11 +117,11 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
       runPurpose: runPurpose ?? undefined,
       plan: plan ?? undefined,
       recordProof,
-      referralCode: referralCode.trim() || undefined,
+      ageGap,
     }
   }
 
-  // 마지막 단계 제출 클릭 → (마케팅 재확인) → 로그인 or 제출
+  // 마지막 단계 제출 클릭 → (마케팅 재확인) → 제출 (로그인 여부와 무관하게 바로 접수)
   function handleFinishClick() {
     if (!stepValid(TOTAL_STEPS - 1)) return
     if (!agreeMarketing) {
@@ -145,13 +137,6 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
     analytics.applicationSubmit()
     const form = buildForm(marketing)
     saveLastPhone(phone.trim())
-    if (!session) {
-      // 로그인 없이 여기까지 옴 → 폼 저장 후 카카오 로그인(redirect). 복귀 후 App 이 자동 제출.
-      savePendingApplication(form)
-      await signInWithKakao()
-      return
-    }
-    // 이미 로그인 상태면 바로 제출
     setSubmitting(true)
     try {
       const { applicationId } = await submitApplication(form)
@@ -212,7 +197,7 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
                 placeholder="010-1234-5678"
                 className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-lg text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-900"
               />
-              <p className="mt-2 text-xs text-gray-400">로그인 없이 시작해요. 마지막에 카카오로 1초 인증만 하면 끝!</p>
+              <p className="mt-2 text-xs text-gray-400">로그인 없이 바로 신청돼요. 신청 내역은 나중에 카카오 로그인하면 확인할 수 있어요.</p>
             </Field>
           )}
 
@@ -237,11 +222,11 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
                   ))}
                 </div>
               </Field>
-              <Field label="나이" hint="만 나이로 입력해 주세요">
+              <Field label="나이" hint="만 20세 이상만 신청 가능해요">
                 <input
                   type="number"
                   inputMode="numeric"
-                  min={14}
+                  min={20}
                   max={99}
                   value={ageRange ?? ''}
                   onChange={(e) => setAgeRange(e.target.value)}
@@ -249,6 +234,22 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
                   className="w-32 rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-900"
                 />
                 <span className="ml-2 text-sm text-gray-500">세</span>
+                {ageRange && Number(ageRange) < 20 && (
+                  <p className="mt-2 text-xs text-red-500">만 20세 이상만 신청할 수 있어요.</p>
+                )}
+              </Field>
+              <Field label="나이차이 매칭 범위" hint="이 범위 안에서 매칭해 드려요">
+                <div className="flex items-center gap-3">
+                  <select
+                    value={ageGap}
+                    onChange={(e) => setAgeGap(Number(e.target.value))}
+                    className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:outline-none focus:border-gray-900"
+                  >
+                    {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                      <option key={n} value={n}>±{n}세 이내{n === 7 ? ' (기본)' : ''}</option>
+                    ))}
+                  </select>
+                </div>
               </Field>
               <Field label="MBTI" hint="선택 — 그룹 분위기 참고용">
                 <input
@@ -272,10 +273,10 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
                       key={opt.code}
                       selected={pace === opt.code}
                       onClick={() => setPace(opt.code)}
-                      className="!py-3 justify-center"
+                      className="!py-3 flex flex-col items-center gap-0.5"
                     >
                       <span className="font-bold text-base">{opt.label}</span>
-                      <span className="text-xs opacity-70"> /km</span>
+                      <span className="text-xs opacity-70">{opt.range}</span>
                     </Chip>
                   ))}
                 </div>
@@ -284,7 +285,7 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
                     <p className="text-sm text-gray-700 font-medium">
                       {PACE_PICK.find((o) => o.code === pace)?.desc}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">* 페이스 = 1km를 달리는 시간 (분/km)</p>
+                    <p className="text-xs text-gray-400 mt-0.5">정확히 안 맞아도 더 가까운 쪽으로 매칭해드려요.</p>
                   </div>
                 )}
               </Field>
@@ -320,77 +321,39 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
             </>
           )}
 
-          {/* STEP 3 — 이용권 + 희망 날짜 */}
+          {/* STEP 3 — 참가 안내 (무료화: 단일 플랜 자동 적용) */}
           {step === 3 && (
             <>
-              <Field label="이용권" hint="시즌권은 목요일 4주가 자동 선택돼요">
-                <div className="space-y-2">
-                  {PLANS.map((p) => {
-                    const on = plan === p.code
-                    return (
-                      <button
-                        key={p.code}
-                        type="button"
-                        onClick={() => choosePlan(p.code)}
-                        className={
-                          'w-full text-left rounded-2xl border px-4 py-3 transition-colors ' +
-                          (on ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-900')
-                        }
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold">{p.label}</span>
-                            {p.badge && (
-                              <span
-                                className={
-                                  'text-[10px] font-bold px-1.5 py-0.5 rounded-full ' +
-                                  (on ? 'bg-white text-gray-900' : 'bg-rose-500 text-white')
-                                }
-                              >
-                                {p.badge}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            {p.originalPrice && (
-                              <span className={'text-xs line-through ' + (on ? 'text-white/40' : 'text-gray-300')}>
-                                {p.originalPrice}
-                              </span>
-                            )}
-                            <span className="font-bold">{p.price}</span>
-                          </div>
-                        </div>
-                        <p className={'text-xs mt-1 ' + (on ? 'text-white/70' : 'text-gray-400')}>{p.desc}</p>
-                      </button>
-                    )
-                  })}
+              <Field label="참가 안내" hint="참가비는 무료예요">
+                <div className="rounded-2xl border-2 border-gray-900 px-4 py-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-900">{PLANS[0].label}</span>
+                    <div className="flex items-center gap-1.5">
+                      {PLANS[0].originalPrice && (
+                        <span className="text-xs line-through text-gray-300">{PLANS[0].originalPrice}</span>
+                      )}
+                      <span className="font-bold text-gray-900">{PLANS[0].price}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs mt-1 text-gray-500">{PLANS[0].desc}</p>
+                </div>
+                <div className="mt-2 rounded-xl bg-gray-50 border border-gray-200 px-3.5 py-3">
+                  <p className="text-xs font-bold text-gray-900 mb-1.5">🔒 보증금 {DEPOSIT.amount}</p>
+                  <ul className="space-y-1">
+                    {DEPOSIT.rules.map((r) => (
+                      <li key={r} className="flex gap-1.5 text-xs text-gray-500 leading-relaxed">
+                        <span className="text-emerald-600 font-bold">✓</span>
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </Field>
 
-              {plan === 'season' && <SeasonDetail />}
-
-              <Field label="친구 추천 코드" hint="선택 — 친구 이름+전화번호 뒷 4자리 (예: 홍길동9999)">
-                <input
-                  type="text"
-                  value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value)}
-                  placeholder="홍길동9999"
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-900"
-                />
-                <p className="mt-1.5 text-xs text-emerald-600">입력하면 두 분 모두 1,000원 환급 (참가 확인 후)</p>
-              </Field>
-
-              <Field label="희망 날짜" hint="목요일만 운영해요">
-                <p className="mb-2 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg px-3 py-2">
-                  📍 <span className="font-bold">여의도 한강 · 목요일 저녁 8시(20:00)</span> · 5km
-                </p>
-                <Calendar selected={dates} onChange={setDates} monthsAhead={1} allowedWeekdays={[4]} />
-                {dates.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    선택 {dates.length}일: {dates.slice().sort().map(formatDateLabel).join(', ')}
-                  </p>
-                )}
-              </Field>
+              <div className="rounded-xl bg-gray-100 px-4 py-3 text-sm text-gray-700">
+                📍 <span className="font-bold">여의도 한강 · 매주 목요일 저녁 8시</span> · 5km<br />
+                <span className="text-xs text-gray-500 mt-0.5 block">날짜 고를 필요 없어요. 목요일마다 열립니다.</span>
+              </div>
             </>
           )}
 
@@ -425,7 +388,7 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
               </div>
               {!session && (
                 <p className="text-xs text-gray-400">
-                  ‘신청 완료’를 누르면 카카오로 1초 인증 후 접수돼요. 입력하신 내용은 그대로 유지됩니다.
+                  로그인 없이 바로 접수돼요. 나중에 카카오 로그인하면 이 번호로 신청한 내역이 자동으로 연결돼요.
                 </p>
               )}
             </>
@@ -476,7 +439,10 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
               {step < TOTAL_STEPS - 1 ? (
                 <button
                   type="button"
-                  onClick={() => setStep((s) => s + 1)}
+                  onClick={() => {
+                    analytics.applyStep(step, STEP_NAMES[step])
+                    setStep((s) => s + 1)
+                  }}
                   disabled={!stepValid(step)}
                   className="flex-1 rounded-2xl bg-gray-900 text-white font-bold py-3.5 disabled:opacity-30 active:scale-[0.99] transition-transform"
                 >
@@ -489,7 +455,7 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
                   disabled={!stepValid(5) || submitting}
                   className="flex-1 rounded-2xl bg-gray-900 text-white font-bold py-3.5 disabled:opacity-30 active:scale-[0.99] transition-transform"
                 >
-                  {submitting ? '신청 중…' : session ? '신청 완료하기' : '카카오로 인증하고 신청 완료'}
+                  {submitting ? '신청 중…' : '신청 완료하기'}
                 </button>
               )}
             </div>
@@ -500,47 +466,6 @@ export function ApplyModal({ open, onClose, onSuccess }: ApplyModalProps) {
   )
 }
 
-const SEASON_TIMELINE: { week: string; title: string; desc: string }[] = [
-  { week: '1주차', title: '첫 온도', desc: '어색함은 제로. 나와 페이스가 비슷한 러닝메이트와 기분 좋은 첫 한강 러닝.' },
-  { week: '2주차', title: '체득', desc: '오버페이스 없는 달리기. 내 숨소리에 집중하며 5km를 지치지 않고 완주하는 경험.' },
-  { week: '3주차', title: '전환', desc: '목요일 밤 8시가 기다려지기 시작합니다. 낮 동안 쌓인 업무 스트레스가 한강 바람과 함께 풀려요.' },
-  { week: '4주차', title: '습관', desc: '4주 완주 완료. 달리기는 더 이상 결심해야 하는 숙제가 아니라, 삶 속의 기분 좋은 루틴이 됩니다.' },
-]
-
-// 시즌권 선택 시 노출되는 설명 · 4주 타임라인 · 안내문
-function SeasonDetail() {
-  return (
-    <div className="rounded-2xl bg-gray-900 text-white p-4">
-      <p className="text-sm leading-relaxed">
-        의지보다 강력한 건, <span className="font-bold">나를 기다리는 동료들</span>입니다.
-        <br />
-        억지로 쥐어짜는 갓생 말고, 매주 목요일 밤 자연스럽게 몸이 먼저 반응하는 4주 러닝 루틴을 만들어보세요.
-      </p>
-
-      <div className="mt-4 relative pl-1">
-        <div className="absolute left-[5px] top-2 bottom-2 w-px bg-white/20" />
-        <div className="space-y-3">
-          {SEASON_TIMELINE.map((w) => (
-            <div key={w.week} className="relative flex gap-3">
-              <div className="relative z-10 mt-1 w-2.5 h-2.5 shrink-0 rounded-full bg-white" />
-              <div>
-                <p className="text-sm font-bold">
-                  {w.week} · {w.title}
-                </p>
-                <p className="text-xs text-white/60 mt-0.5 leading-relaxed">{w.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <p className="mt-4 text-xs text-white/70 leading-relaxed border-t border-white/10 pt-3">
-        시즌권 러너에게는 매주 페이스와 성향(T/F, 조용한 러닝 등)에 가장 잘 맞는 그룹을{' '}
-        <span className="font-bold text-white">1순위로 정밀 매칭</span>해드려요.
-      </p>
-    </div>
-  )
-}
 
 // 서비스 범위 — ONDO가 하는 것 / 안 하는 것 (랜딩·신청폼 공용)
 export function ServiceScope() {
@@ -552,7 +477,7 @@ export function ServiceScope() {
           '최근 페이스·러닝 기록을 확인한 러너 매칭',
           '비슷한 페이스의 3~5명 소규모 그룹 구성',
           '집합 장소·시간·함께 뛸 분들의 페이스 안내',
-          '3명 이상 성사 보장 (안 되면 2주 내 재매칭, 그래도 안 되면 환불)',
+          '3명 이상 성사 보장 (안 되면 2주 내 재매칭, 그래도 안 되면 보증금 전액 환급)',
         ].map((t) => (
           <li key={t} className="flex gap-1.5">
             <span className="text-emerald-600 font-bold">✓</span>
@@ -575,7 +500,7 @@ export function ServiceScope() {
         ))}
       </ul>
       <p className="mt-3 text-gray-500">
-        ONDO는 <span className="font-semibold text-gray-700">페이스가 맞는 사람</span>을 연결해요. 실제 러닝은 만난 분들끼리 자유롭게 진행하시면 됩니다. <span className="font-semibold text-gray-700">운영자가 이끄는 러닝 모임이 아니에요.</span>
+        ONDO는 <span className="font-semibold text-gray-700">이미 혼자 5km를 달릴 수 있는 분들을 위한 서비스</span>예요. 비슷한 페이스로 <span className="font-semibold text-gray-700">꾸준히 달리도록 연결</span>합니다. 러닝을 가르치거나 이끄는 모임이 아니에요.
       </p>
     </div>
   )

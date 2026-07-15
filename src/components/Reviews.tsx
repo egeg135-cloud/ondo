@@ -1,6 +1,9 @@
 // 랜딩 본문
 import { useEffect, useRef, useState } from 'react'
 import { BETA_NOTE, COMMON_OPINIONS, TESTIMONIALS } from '../constants/content'
+import { DEPOSIT } from '../types'
+import { getRecentReviews } from '../lib/api'
+import { MemberStats } from './MemberStats'
 import { analytics } from '../lib/analytics'
 
 const TIMELINE: { time: string; title: string; desc: string }[] = [
@@ -12,9 +15,14 @@ const TIMELINE: { time: string; title: string; desc: string }[] = [
 
 function TestimonialSlider() {
   const [current, setCurrent] = useState(0)
+  const [liveReviews, setLiveReviews] = useState<string[]>([])
   const total = 5
   const startX = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    getRecentReviews(3).then(setLiveReviews).catch(() => setLiveReviews([]))
+  }, [])
 
   function onPointerDown(e: React.PointerEvent) {
     startX.current = e.clientX
@@ -27,7 +35,7 @@ function TestimonialSlider() {
   }
 
   return (
-    <div className="mt-14">
+    <div id="reviews" className="mt-14 scroll-mt-32">
       <h2 className="text-xl font-bold text-gray-900 mb-4">실제 참가 후기</h2>
       <div
         ref={containerRef}
@@ -49,6 +57,25 @@ function TestimonialSlider() {
             />
           </div>
         ))}
+        {/* 좌우 버튼 */}
+        {current > 0 && (
+          <button
+            type="button"
+            onClick={() => setCurrent((c) => c - 1)}
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center text-lg"
+          >
+            ‹
+          </button>
+        )}
+        {current < total - 1 && (
+          <button
+            type="button"
+            onClick={() => setCurrent((c) => c + 1)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center text-lg"
+          >
+            ›
+          </button>
+        )}
       </div>
       {/* 인디케이터 */}
       <div className="flex justify-center gap-1.5 mt-3">
@@ -61,10 +88,34 @@ function TestimonialSlider() {
           />
         ))}
       </div>
+      {/* 이번 주 참가자 후기 (DB 실시간) */}
+      {liveReviews.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {liveReviews.map((r, i) => (
+            <div key={i} className="rounded-2xl bg-white border border-emerald-200 shadow-sm p-4">
+              <span className="inline-block text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-800 mb-2">
+                최근 참가자
+              </span>
+              <p className="text-sm text-gray-800 leading-relaxed">💬 "{r}"</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 텍스트 후기 */}
       <div className="mt-4 space-y-3">
         {TESTIMONIALS.slice(0, 3).map((r) => (
           <div key={r.meta} className="rounded-2xl bg-white border border-gray-200 shadow-sm p-4">
+            {r.pace && (
+              <span
+                className={
+                  'inline-block text-xs px-2 py-1 rounded mb-2 ' +
+                  (r.pace === '6분' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800')
+                }
+              >
+                {r.pace} 페이스
+              </span>
+            )}
             <p className="text-sm text-gray-800 leading-relaxed">💬 "{r.quote}"</p>
             <p className="mt-2 text-xs text-gray-400">{r.meta}</p>
           </div>
@@ -103,6 +154,14 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
     <>
       {/* 섹션 2: 경험 공감 */}
       <section className="mt-16">
+        <div className="rounded-2xl overflow-hidden mb-5">
+          <img
+            src="/photos/sofa_procrastinate.jpg"
+            alt="퇴근 후 소파에서 러닝을 미루는 모습"
+            loading="lazy"
+            className="w-full aspect-[4/3] object-cover"
+          />
+        </div>
         <h2 className="text-2xl font-bold text-gray-900 leading-snug">혹시, 이런 적 없으세요?</h2>
         <div className="mt-4 space-y-2.5">
           {[
@@ -120,6 +179,28 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
         </p>
       </section>
 
+      {/* 브랜드 문장 */}
+      <section className="mt-14">
+        <div
+          className="relative rounded-3xl overflow-hidden px-6 py-12 text-center"
+          style={{
+            backgroundImage: 'url(/photos/hangang_night.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="relative z-10">
+            <p className="text-2xl font-bold text-white leading-snug">
+              운동은 의지가 아니라<br />약속이 만들어요.
+            </p>
+            <p className="mt-3 text-sm text-white/70 leading-relaxed">
+              혼자서는 미루던 러닝도,<br />함께라면 루틴이 됩니다.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* 섹션 3: 매칭 방식 */}
       <section className="mt-14">
         <p className="text-xs font-semibold tracking-wide text-gray-400">신청하면 이렇게 돼요</p>
@@ -130,8 +211,8 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
           <div className="absolute left-[18px] top-3 bottom-3 w-px bg-gray-200" />
           <div className="space-y-5">
             {[
-              { step: '1', title: '신청', desc: '페이스(6:00/7:00) 고르고 5초면 끝.' },
-              { step: '2', title: '페이스 매칭', desc: '기록을 확인해 비슷한 3~5명으로 그룹 구성.' },
+              { step: '1', title: '신청', desc: '6분·7분 페이스 고르고 5초면 끝.' },
+              { step: '2', title: '페이스 매칭', desc: '기록을 확인해 나와 맞는 3~5명으로 그룹 구성.' },
               { step: '3', title: '목요일, 러닝메이트', desc: '여의도 한강 저녁 8시. 부담 없이 5km.' },
             ].map((r) => (
               <div key={r.step} className="relative flex gap-4">
@@ -180,7 +261,7 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
                 <p className="text-xs font-bold text-gray-900 mb-1">[ONDO 매칭 완료 안내]</p>
                 <p className="text-xs text-gray-600 leading-relaxed">
                   OOO님, 내일 저녁 8시<br />
-                  <span className="font-semibold text-gray-800">[6:30 페이스]</span> 그룹 매칭이 완료되었습니다.
+                  <span className="font-semibold text-gray-800">[6:00 페이스]</span> 그룹 매칭이 완료되었습니다.
                   <br /><br />
                   내일 여의나루역 2번 출구 앞에서 만나요! 🏃
                 </p>
@@ -192,23 +273,39 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
       </section>
 
       {/* 왜 ONDO일까 */}
-      <section ref={whyRef} className="mt-14">
+      <section ref={whyRef} id="why-ondo" className="mt-14 scroll-mt-32">
+        <div className="rounded-2xl overflow-hidden mb-5">
+          <img
+            src="/photos/feet_sync.jpg"
+            alt="함께 발을 맞춰 달리는 러너들의 러닝화"
+            loading="lazy"
+            className="w-full aspect-[16/9] object-cover"
+          />
+        </div>
         <h2 className="text-xl font-bold text-gray-900 mb-4">왜 ONDO일까</h2>
         <div className="space-y-3">
           <div className="rounded-2xl bg-[#F5F5F5] p-5">
-            <p className="font-bold text-gray-900">3~5명, 딱 좋은 인원</p>
+            <p className="font-bold text-gray-900">꾸준히 뛰게 된다</p>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-              20명이 모이면 '나 하나쯤 안 뛰어도 되겠지.'<br />
-              3~5명은 눈치 볼 필요 없이, 페이스를 기분 좋게 지켜주는 최적의 숫자입니다.
+              혼자 뛰면 미루기 쉽지만,<br />
+              목요일 저녁 <span className="font-semibold text-gray-800">기다리는 사람이 생기면</span> 러닝이 루틴이 됩니다.
             </p>
           </div>
           <div className="rounded-2xl bg-[#F5F5F5] p-5">
-            <p className="font-bold text-gray-900">달리기만, 깔끔하게</p>
+            <p className="font-bold text-gray-900">페이스가 맞는다</p>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-              뒤풀이 없이, 억지 친목 없이.<br />
-              뛰고 싶은 사람끼리 만나 <span className="font-semibold text-gray-800">달리고 깔끔하게 해산</span>합니다.
+              나와 비슷한 속도의 러너와 만나니 <span className="font-semibold text-gray-800">오버페이스도, 뒤처짐도 없어요.</span><br />
+              6분·7분 그룹으로 나눠 딱 맞게 연결합니다.
             </p>
           </div>
+          <div className="rounded-2xl bg-[#F5F5F5] p-5">
+            <p className="font-bold text-gray-900">부담이 없다</p>
+            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+              뒤풀이 없이, 억지 친목 없이.<br />
+              3~5명 소규모라 <span className="font-semibold text-gray-800">눈치 볼 일 없이</span> 뛰고 깔끔하게 해산합니다.
+            </p>
+          </div>
+          {/* MBTI 매칭 카드 — 초기 노출 보류, FAQ로 이동 검토 (2차 개편에서 숨김)
           <div className="rounded-2xl bg-[#F5F5F5] p-5">
             <p className="font-bold text-gray-900">MBTI로 결이 맞는 사람과</p>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
@@ -216,40 +313,86 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
               조용히 집중하고 싶은 사람, 가볍게 대화하며 뛰고 싶은 사람 — 각자의 결에 맞는 그룹으로 연결해드려요.
             </p>
           </div>
+          */}
         </div>
       </section>
 
       {/* 후기 슬라이더 */}
       <TestimonialSlider />
 
-      {/* 가격 + 지인 추천 */}
-      <section className="mt-14">
-        <h2 className="text-xl font-bold text-gray-900">커피 한 잔 값으로,<br />이번 주 목요일을 바꾸세요.</h2>
-        <div className="mt-4 flex gap-3">
-          <div className="flex-1 rounded-2xl bg-[#F5F5F5] p-4 text-center">
-            <p className="text-xs text-gray-400 mb-1">1회권</p>
-            <p className="text-2xl font-bold text-gray-900">5,000원</p>
-          </div>
-          <div className="flex-1 rounded-2xl bg-[#F5F5F5] p-4 text-center">
-            <p className="text-xs text-gray-400 mb-1">4주 시즌권</p>
-            <p className="text-2xl font-bold text-gray-900">10,000원</p>
-            <p className="text-xs text-gray-400 mt-0.5">회당 2,500원</p>
-          </div>
-        </div>
+      {/* 신청자 구성 시각화 */}
+      <MemberStats />
 
-        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-          <p className="font-bold text-gray-900 mb-1">🎁 친구 추천 할인</p>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            신청 시 친구 이름을 입력하면 <span className="font-semibold text-gray-800">두 분 모두 1,000원 환급</span>해드려요.<br />
-            <span className="text-xs text-gray-400">단, 두 분 모두 참가 확인 후 환급됩니다. 매칭은 각자 페이스 기준으로 진행돼요.</span>
-          </p>
+      {/* 비교표 */}
+      <section className="mt-14">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">대형 러닝크루와 뭐가 다른가요?</h2>
+        <div className="overflow-x-auto rounded-2xl border border-gray-200">
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="bg-[#F5F5F5]">
+                <th className="px-4 py-3 font-semibold text-gray-500 w-[38%]">항목</th>
+                <th className="px-3 py-3 font-semibold text-gray-500 w-[31%]">대형 러닝크루</th>
+                <th className="px-3 py-3 font-semibold text-gray-900 w-[31%]">ONDO</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {[
+                ['인원', '30~100명', '3~5명 소규모'],
+                ['페이스 매칭', '✗ 섞임', '✓ 6분·7분 분리'],
+                ['처음 오는 사람', '✗ 눈치 보임', '✓ 다 처음 만남'],
+                ['참여 부담', '✗ 친목 강요', '✓ 뛰고 깔끔 해산'],
+                ['운영자', '✓ 있음', '✗ 없음(가이드만)'],
+                ['가격', '✓ 무료', '✓ 무료 (보증금 1만원)'],
+              ].map(([label, bad, good]) => (
+                <tr key={label} className="bg-white">
+                  <td className="px-4 py-3 font-medium text-gray-700">{label}</td>
+                  <td className="px-3 py-3 text-gray-400">{bad}</td>
+                  <td className="px-3 py-3 font-semibold text-gray-900">{good}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+        <p className="mt-2 text-xs text-gray-400">ONDO는 러닝을 이끄는 크루가 아니라, 잘 맞는 러너를 연결합니다.</p>
+      </section>
+
+      {/* 가격 — 무료 + 보증금 */}
+      <section id="price" className="mt-14 scroll-mt-32">
+        <h2 className="text-xl font-bold text-gray-900 leading-snug">
+          참가비 0원.<br />약속만 가져오세요.
+        </h2>
+        <p className="mt-3 text-sm text-gray-500 leading-relaxed">
+          ONDO는 이제 <span className="font-semibold text-gray-700">무료</span>입니다. 대신 서로의 목요일을 지키기 위한{' '}
+          <span className="font-semibold text-gray-700">보증금 {DEPOSIT.amount}</span>이 있어요.
+        </p>
+        <div className="mt-5 rounded-2xl bg-white border-2 border-[#FF5A1F] shadow-lg p-5">
+          <p className="text-xs font-semibold text-[#FF5A1F] mb-1">이번 주 참여</p>
+          <p className="text-3xl font-bold text-gray-900">
+            무료{' '}
+            <span className="text-base font-semibold text-gray-300 line-through align-middle">5,000원</span>
+          </p>
+          <p className="mt-1.5 text-sm text-gray-600">페이스 맞는 러너 3~5명과 목요일 저녁 여의도 5km.</p>
+          <div className="mt-4 rounded-xl bg-[#F5F5F5] p-3.5">
+            <p className="text-xs font-bold text-gray-900 mb-2">🔒 보증금 {DEPOSIT.amount}은 이렇게 움직여요</p>
+            <ul className="space-y-1.5">
+              {DEPOSIT.rules.map((r) => (
+                <li key={r} className="flex gap-1.5 text-xs text-gray-600 leading-relaxed">
+                  <span className="text-emerald-600 font-bold">✓</span>
+                  <span>{r}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-gray-400 leading-relaxed">
+          기존에 참가비를 결제하신 분들께는 전액 환불을 진행하고 있어요. 개별 카톡으로 안내드립니다.
+        </p>
       </section>
 
       {/* 마감 CTA */}
       <section className="mt-14">
         <div
-          className="relative rounded-3xl overflow-hidden flex flex-col justify-end min-h-[320px] p-6"
+          className="relative rounded-3xl overflow-hidden flex flex-col justify-end min-h-[300px] p-6"
           style={{ backgroundImage: 'url(/cta.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
         >
           <div className="absolute inset-0 bg-black/55" />
@@ -265,9 +408,8 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
               onClick={onApply}
               className="mt-4 w-full rounded-2xl bg-white text-gray-900 font-bold py-4 active:scale-[0.99] transition-transform"
             >
-              5초 만에 신청하기
+              이번 목요일 함께 뛰기
             </button>
-            <p className="mt-2 text-center text-xs text-white/50">(번거로운 회원가입 절차를 싹 뺐어요!)</p>
           </div>
         </div>
       </section>

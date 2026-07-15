@@ -35,6 +35,11 @@ export function isWeekendISO(iso: string): boolean {
   return dow === 0 || dow === 6
 }
 
+/** 다가오는(가장 가까운) 목요일 세션 날짜 ISO — 매칭확정/공지 기능의 "이번 주 세션" 키 */
+export function getUpcomingSessionDate(): string {
+  return getNextThursdays(1)[0]
+}
+
 /** 오늘 이후 가장 가까운 목요일부터 count 개의 목요일 ISO 목록 (시즌권 자동선택용) */
 export function getNextThursdays(count = 4, from: Date = new Date()): string[] {
   const start = new Date(from.getFullYear(), from.getMonth(), from.getDate())

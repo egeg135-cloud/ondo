@@ -9,6 +9,9 @@ interface NavbarProps {
 export function Navbar({ session, onMyApps }: NavbarProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-30 bg-black border-b border-white/10">
+      <div className="max-w-[550px] mx-auto px-4 py-1.5 text-center border-b border-white/10">
+        <p className="text-[11px] tracking-wide text-white/50">퇴근 후 러닝 루틴 서비스, ONDO</p>
+      </div>
       <div className="max-w-[550px] mx-auto px-4 h-14 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2">
           <span className="text-sm tracking-[0.4em] text-white font-extralight uppercase">ONDO</span>
