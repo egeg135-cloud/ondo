@@ -23,7 +23,7 @@ import { formatDateLabel, getUpcomingSessionDate } from './lib/dates'
 import { paceText, planText, purposeText } from './types'
 import type { PaceBreakdown, SessionInfo } from './types'
 
-type Filter = 'all' | 'unpaid' | 'single' | 'season'
+type Filter = 'all' | 'unpaid' | 'confirmed' | 'applied'
 
 function getKeyFromUrl(): string {
   return new URLSearchParams(window.location.search).get('key') ?? ''
@@ -116,16 +116,16 @@ export default function AdminApp() {
 
   const filtered = useMemo(() => {
     if (filter === 'unpaid') return active.filter((a) => !a.paid)
-    if (filter === 'single') return active.filter((a) => a.plan === 'single')
-    if (filter === 'season') return active.filter((a) => a.plan === 'season')
+    if (filter === 'confirmed') return active.filter((a) => a.status === 'confirmed')
+    if (filter === 'applied') return active.filter((a) => a.status === 'applied')
     return active
   }, [active, filter])
 
   const summary = useMemo(() => ({
     total: active.length,
     paid: active.filter((a) => a.paid).length,
-    single: active.filter((a) => a.plan === 'single').length,
-    season: active.filter((a) => a.plan === 'season').length,
+    confirmed: active.filter((a) => a.status === 'confirmed').length,
+    applied: active.filter((a) => a.status === 'applied').length,
   }), [active])
 
   const reload = () => { void load(key); void loadSession() }
@@ -203,8 +203,8 @@ export default function AdminApp() {
           {[
             { label: '전체 신청', value: summary.total },
             { label: '보증금 확인', value: summary.paid },
-            { label: '1회 체험권', value: summary.single },
-            { label: '4주 멤버십', value: summary.season },
+            { label: '매칭 확정', value: summary.confirmed },
+            { label: '대기 중', value: summary.applied },
           ].map((s) => (
             <div key={s.label} className="rounded-2xl bg-white border border-navy/10 p-3 text-center">
               <p className="text-2xl font-bold text-navy">{s.value}</p>
@@ -218,8 +218,8 @@ export default function AdminApp() {
           {([
             ['all', '전체'],
             ['unpaid', '보증금 전'],
-            ['single', '1회 체험권'],
-            ['season', '4주 멤버십'],
+            ['confirmed', '매칭 확정'],
+            ['applied', '대기 중'],
           ] as [Filter, string][]).map(([f, label]) => (
             <button
               key={f}
@@ -499,12 +499,11 @@ function ApplicantCard({
                 미가입
               </span>
             )}
-            <span className={
-              'text-[11px] font-bold px-2 py-0.5 rounded-full ' +
-              (isSeason ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700')
-            }>
-              {isSeason ? '👑 4주' : '1회'}
-            </span>
+            {isSeason && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                👑 구 4주권
+              </span>
+            )}
             {isConfirmed && (
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-navy text-white">확정</span>
             )}
@@ -605,7 +604,7 @@ function ApplicantCard({
             전날 리마인드 {showDayBefore ? '▲' : '▼'}
           </button>
         )}
-        {isSeason && (
+        {a.paid && (
           <button
             type="button"
             onClick={() => setShowRejoin((v) => !v)}
@@ -675,8 +674,8 @@ function ApplicantCard({
         />
       )}
 
-      {/* 재참여 안내 (4주 멤버십) */}
-      {showRejoin && isSeason && (
+      {/* 재참여 안내 (보증금 이월 보유자 — 참석 후 다음 주 유도) */}
+      {showRejoin && a.paid && (
         <NoticeBlock
           text={buildRejoinMessage({ name: a.user_name })}
           name={`${a.user_name}님 재참여 안내`}

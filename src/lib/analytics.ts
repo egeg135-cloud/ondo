@@ -48,6 +48,8 @@ export const analytics = {
   // page_view는 gtag('config') 자동 집계 — 수동 발사 금지(이중 집계)
   heroCtaClick: () => track('hero_cta_click'),
   leadSubmit: () => track('lead_submit'),
+  leadPopupView: () => track('lead_popup_view'),
+  shareCardClick: () => track('share_card_click'),
   scroll: (pct: 25 | 50 | 75) => track(`scroll_${pct}`),
   whyOndoView: () => track('why_ondo_view'),
   faqOpen: (question: string) => track('faq_open', { question }),
@@ -58,7 +60,8 @@ export const analytics = {
   applicationComplete: (props?: Props) => track('application_complete', props),
   depositStart: () => track('deposit_start'),
   depositCopyAccount: () => track('deposit_copy_account'),
-  exitIntent: () => track('exit_intent'),
+  // source 구분: 'mouseout'=진짜 이탈 의도, 'hidden'=탭 전환·타 앱 이동(입금하러 은행 앱 등)
+  exitIntent: (source: 'mouseout' | 'hidden') => track('exit_intent', { source }),
   experimentView: (name: string, variant: string) =>
     track('experiment_view', { experiment: name, variant }),
 }

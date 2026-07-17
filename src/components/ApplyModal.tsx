@@ -338,7 +338,9 @@ export function ApplyModal({ open, onClose, onSuccess, initialPace }: ApplyModal
                   <p className="text-xs mt-1 text-gray-500">{PLANS[0].desc}</p>
                 </div>
                 <div className="mt-2 rounded-xl bg-gray-50 border border-gray-200 px-3.5 py-3">
-                  <p className="text-xs font-bold text-gray-900 mb-1.5">🔒 보증금 {DEPOSIT.amount}</p>
+                  <p className="text-xs font-bold text-gray-900 mb-1.5">
+                    🔒 보증금 {DEPOSIT.amount} — 서로의 목요일을 지키는 약속이에요
+                  </p>
                   <ul className="space-y-1">
                     {DEPOSIT.rules.map((r) => (
                       <li key={r} className="flex gap-1.5 text-xs text-gray-500 leading-relaxed">

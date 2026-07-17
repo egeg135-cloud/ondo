@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnchorTabs } from './components/AnchorTabs'
 import { ApplyModal, ServiceScope, type ApplySuccessInfo } from './components/ApplyModal'
 import { LeadPopup } from './components/LeadPopup'
@@ -38,6 +38,13 @@ function App() {
   const [copied, setCopied] = useState(false)
   const { session } = useSession()
 
+  // exit intent 팝업 가드 — 모달/오버레이가 떠 있을 때는 이탈 감지를 무시 (폼 작성 중 약관
+  // 링크를 새 탭으로 열면 visibilitychange가 발화해 팝업이 폼을 덮는 문제 방지)
+  const overlayOpenRef = useRef(false)
+  useEffect(() => {
+    overlayOpenRef.current = modalOpen || paceModalOpen || !!success || leadPopup
+  }, [modalOpen, paceModalOpen, success, leadPopup])
+
   // 재참여 원클릭 링크 (?apply=1) — 문자/카톡 링크로 진입 시 바로 신청 모달
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -66,20 +73,24 @@ function App() {
       })
     }
     let exited = false
-    const onExit = () => {
+    const onExit = (source: 'mouseout' | 'hidden') => {
       if (exited) return
+      if (overlayOpenRef.current) return
       exited = true
-      analytics.exitIntent()
+      analytics.exitIntent(source)
       // 이탈 시점에 전화번호 수집 팝업 (첫 방문 + 일반 진입일 때만)
       const seen = localStorage.getItem('ondo_lead_seen')
       const isApplyLink = new URLSearchParams(window.location.search).get('apply') === '1'
-      if (!seen && !isApplyLink) setLeadPopup(true)
+      if (!seen && !isApplyLink) {
+        analytics.leadPopupView()
+        setLeadPopup(true)
+      }
     }
     const onMouseOut = (e: MouseEvent) => {
-      if (e.clientY <= 0) onExit()
+      if (e.clientY <= 0) onExit('mouseout')
     }
     const onHide = () => {
-      if (document.visibilityState === 'hidden') onExit()
+      if (document.visibilityState === 'hidden') onExit('hidden')
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     document.addEventListener('mouseout', onMouseOut)
@@ -182,6 +193,9 @@ function App() {
               >
                 {hero.cta}
               </button>
+              <p className="mt-2 text-center text-xs text-white/60">
+                참가비 0원 · 보증금 1만원은 돌려받는 돈이에요
+              </p>
             </div>
           </div>
         </section>
@@ -232,9 +246,11 @@ function App() {
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-3xl">🎉</p>
-            <p className="mt-2 mb-1 font-bold text-gray-900 text-xl">신청 완료!</p>
+            <p className="mt-2 mb-1 font-bold text-gray-900 text-xl">이제 한 걸음 남았어요</p>
             <p className="text-sm text-gray-500">
-              아래 계좌로 보증금 {DEPOSIT.amount}을 보내면 매칭 명단에 올라가요.
+              보증금 {DEPOSIT.amount}으로 이번 목요일 자리를 맡아두세요.
+              <br />
+              참석하면 다음 주로 이월 — 이 1만원 하나로 계속 달릴 수 있어요.
             </p>
 
             {/* 보증금 안내 */}
@@ -284,7 +300,10 @@ function App() {
             </button>
             <button
               type="button"
-              onClick={() => void shareMatchCard(success.name)}
+              onClick={() => {
+                analytics.shareCardClick()
+                void shareMatchCard(success.name)
+              }}
               className="mt-2 w-full rounded-2xl bg-gray-100 text-gray-700 font-bold py-3"
             >
               📸 스토리에 자랑하기
@@ -339,6 +358,9 @@ function App() {
           >
             {hero.cta}
           </button>
+          <p className="mt-1.5 text-center text-[11px] text-white/70">
+            참가비 0원 · 보증금 1만원은 돌려받는 돈이에요
+          </p>
         </div>
       )}
     </div>

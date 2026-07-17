@@ -63,7 +63,9 @@ export function LeadPopup({ onClose, onApply }: LeadPopupProps) {
               이번 주는 어려우세요?
             </p>
             <p className="mt-1 text-sm text-gray-500">
-              연락처를 남기시면 다음 모집이 열릴 때 알려드릴게요.
+              괜찮아요, ONDO는 이제 무료니까요.
+              <br />
+              다음 목요일 모집이 열리면 알려드릴게요.
             </p>
           </div>
           <button type="button" onClick={dismiss} className="text-gray-300 hover:text-gray-500 text-xl px-1 -mt-1">✕</button>

@@ -338,11 +338,12 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
             <tbody className="divide-y divide-gray-100">
               {[
                 ['인원', '30~100명', '3~5명 소규모'],
-                ['페이스 매칭', '✗ 섞임', '✓ 6분·7분 분리'],
-                ['처음 오는 사람', '✗ 눈치 보임', '✓ 다 처음 만남'],
-                ['참여 부담', '✗ 친목 강요', '✓ 뛰고 깔끔 해산'],
+                ['페이스', '다양한 페이스가 함께', '6분·7분 그룹으로 분리'],
+                ['멤버 구성', '기존 멤버 중심', '매주 모두 처음 만남'],
+                ['모임 후', '뒤풀이·친목 모임', '뛰고 깔끔 해산'],
                 ['운영자', '✓ 있음', '✗ 없음(가이드만)'],
-                ['가격', '✓ 무료', '✓ 무료 (보증금 1만원)'],
+                ['가격', '무료', '무료'],
+                ['약속 장치', '자율 참여', '보증금 1만원 (참석하면 이월 · 언제든 환급)'],
               ].map(([label, bad, good]) => (
                 <tr key={label} className="bg-white">
                   <td className="px-4 py-3 font-medium text-gray-700">{label}</td>
@@ -353,7 +354,9 @@ export function Reviews({ onApply, ddayLabel }: { onApply: () => void; ddayLabel
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-gray-400">ONDO는 러닝을 이끄는 크루가 아니라, 잘 맞는 러너를 연결합니다.</p>
+        <p className="mt-2 text-xs text-gray-400">
+          ONDO는 러닝을 이끄는 크루가 아니라, 잘 맞는 러너를 연결합니다. 크루 활동과 병행하셔도 좋아요 — 목요일 하루, 내 페이스로 가볍게 뛰고 싶을 때.
+        </p>
       </section>
 
       {/* 가격 — 무료 + 보증금 */}

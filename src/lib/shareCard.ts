@@ -54,7 +54,7 @@ function drawCard(name: string): HTMLCanvasElement {
   // 하단 URL
   ctx.fillStyle = 'rgba(255,255,255,0.4)'
   ctx.font = '400 44px sans-serif'
-  ctx.fillText('ondo-match.vercel.app', W / 2, 1730)
+  ctx.fillText('참가비 무료 · ondo-match.vercel.app', W / 2, 1730)
 
   return canvas
 }
