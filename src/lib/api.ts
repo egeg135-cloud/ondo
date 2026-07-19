@@ -448,6 +448,7 @@ export interface AdminApplication {
   user_mbti: string | null
   user_pace_verified: boolean | null
   is_guest: boolean
+  attended: boolean | null
 }
 
 /** 운영자 키로 전체 신청 목록 (이름/연락처 포함). 키 틀리면 throw. */
@@ -466,7 +467,13 @@ export async function adminListApplications(key: string): Promise<AdminApplicati
 export async function updateApplication(
   key: string,
   id: string,
-  patch: { paid?: boolean; invited?: boolean; status?: ApplicationStatus; sessionDate?: string },
+  patch: {
+    paid?: boolean
+    invited?: boolean
+    status?: ApplicationStatus
+    sessionDate?: string
+    attended?: boolean
+  },
 ): Promise<void> {
   const { error } = await supabase.rpc('admin_update_application', {
     p_key: key,
@@ -475,6 +482,7 @@ export async function updateApplication(
     p_invited: patch.invited ?? null,
     p_status: patch.status ?? null,
     p_session_date: patch.sessionDate ?? null,
+    p_attended: patch.attended ?? null,
   })
   if (error) {
     console.error('[ONDO] updateApplication 실패:', error)

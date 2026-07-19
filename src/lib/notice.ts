@@ -54,46 +54,55 @@ export function buildDayBeforeReminder(opts: {
   ].join('\n')
 }
 
-/** 참석 이력 회원용 주간 재참여 안내 메시지 (보증금 이월 상태) */
+/** 참석 이력 회원용 주간 재참여 안내 — 광고성: 마케팅 동의자에게만, (광고) 표기, 21~08시 금지 */
 export function buildRejoinMessage(opts: { name: string }): string {
   const { name } = opts
   return [
-    `${name}님, 이번 주도 뛸까요? 🏃`,
+    `(광고) [ONDO] ${name}님, 이번 주도 뛸까요? 🏃`,
     ``,
     `이번 주 목요일 ${MEET_TIME} ${MEET_PLACE} 5km`,
     `보증금이 이월되어 있어서 추가 입금 없이 바로 참여돼요.`,
     ``,
     `아래 링크에서 클릭 한 번이면 신청 끝!`,
-    `https://ondo-match.vercel.app/?apply=1`,
+    `${REJOIN_LINK}`,
+    AD_FOOTER.trim(),
   ].join('\n')
 }
 
-const APPLY_LINK = 'https://ondo-match.vercel.app/?apply=1'
+// 재참여(기존 접점) 링크 — GA 채널 분리를 위해 UTM 부착
+const REJOIN_LINK = 'https://ondo-match.vercel.app/?apply=1&utm_source=kakao&utm_medium=crm&utm_campaign=rejoin'
+const LEAD_LINK = 'https://ondo-match.vercel.app/?apply=1&utm_source=kakao&utm_medium=crm&utm_campaign=free100'
+
+// 광고성 메시지 공통 푸터 (정통망법 — 전송자 표기 + 무료 수신거부 안내. 21~08시 발송 금지)
+const AD_FOOTER = `무료수신거부: 이 메시지에 '거부'라고 회신해 주세요.`
 
 export type LeadReminderVariant = 'A' | 'B' | 'C'
 
-/** 팝업 리드(미신청) 대상 리마인드 멘트 — "신청서 작성 미완료" 프레임 */
+/** 팝업 리드(미신청) 대상 리마인드 — 광고성: (광고) 표기·수신거부 필수, 21~08시 발송 금지 */
 export function buildLeadReminder(variant: LeadReminderVariant): string {
   switch (variant) {
     case 'A':
       return [
-        `[ONDO] OO님, 신청서 작성이 완료되지 않았어요!`,
+        `(광고) [ONDO] OO님, 신청서 작성이 완료되지 않았어요!`,
         `이번 주 목요일 저녁 8시, 여의도 러닝 — 이제 참가비 무료예요.`,
         `지금 이어서 완료하시면 페이스 맞는 러너와 바로 매칭돼요.`,
-        `${APPLY_LINK}`,
+        `${LEAD_LINK}`,
+        AD_FOOTER.trim(),
       ].join('\n')
     case 'B':
       return [
-        `OO님, 러닝 신청이 마무리되지 않았어요 🏃`,
+        `(광고) [ONDO] OO님, 러닝 신청이 마무리되지 않았어요 🏃`,
         `이번 주 목요일 여의도, 나와 비슷한 페이스의 러너와 5km. 참가비는 무료!`,
         `남은 건 딱 한 걸음, 지금 완료해보세요.`,
-        `${APPLY_LINK}`,
+        `${LEAD_LINK}`,
+        AD_FOOTER.trim(),
       ].join('\n')
     case 'C':
       return [
-        `OO님, 작성하시던 신청서가 아직 완료되지 않았어요.`,
+        `(광고) [ONDO] OO님, 작성하시던 신청서가 아직 완료되지 않았어요.`,
         `이번 주 목요일 모집이 곧 마감돼요 — 놓치기 전에 마저 완료해주세요!`,
-        `${APPLY_LINK}`,
+        `${LEAD_LINK}`,
+        AD_FOOTER.trim(),
       ].join('\n')
   }
 }
@@ -136,8 +145,7 @@ export function buildRefundNotice(opts: { name: string; plan: string | null }): 
     ``,
     `혹시 10분만 시간 내주실 수 있다면 — 전화나 커피 한 잔으로 ONDO에 바라는 점을 듣고 싶어요.`,
     `인터뷰에 응해주신 분께는 다음 세션 우선 매칭을 약속드릴게요 🙏`,
-    ``,
-    `이번 주 목요일에도 여의도에서 기다릴게요!`,
-    `${APPLY_LINK}`,
   ].join('\n')
 }
+// 참고: 환불 안내는 정보성 메시지로 유지하기 위해 재참여 홍보·링크를 넣지 않는다 (광고성 재해석 방지).
+// 재참여 유도는 buildRejoinMessage(광고 표기)로 별도 발송할 것.

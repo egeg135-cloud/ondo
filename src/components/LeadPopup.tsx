@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatPhoneInput, isValidPhone } from '../lib/format'
 import { saveLead } from '../lib/api'
 import { analytics } from '../lib/analytics'
+import { POLICY } from '../types'
 
 interface LeadPopupProps {
   onClose: () => void
@@ -80,13 +81,29 @@ export function LeadPopup({ onClose, onApply }: LeadPopupProps) {
           className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-lg text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-900"
         />
 
+        {/* 개인정보 수집·광고성 수신 동의 고지 (정통망법·개보법 — 버튼 클릭으로 동의 갈음) */}
+        <p className="mt-3 text-[11px] text-gray-400 leading-relaxed">
+          버튼을 누르면 <span className="text-gray-500 font-medium">휴대전화번호 수집·이용</span>과{' '}
+          <span className="text-gray-500 font-medium">모집 알림(광고성 정보) 수신</span>에 동의하는
+          것으로 처리돼요. 보유 기간은 동의 철회 시 또는 수집일로부터 1년이며, 언제든 수신을 거부할
+          수 있어요.{' '}
+          <a
+            href={POLICY.privacy}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-gray-500"
+          >
+            개인정보처리방침
+          </a>
+        </p>
+
         <button
           type="button"
           onClick={handleSubmit}
           disabled={!isValidPhone(phone)}
-          className="mt-3 w-full rounded-2xl bg-gray-900 text-white font-bold py-3.5 disabled:opacity-30"
+          className="mt-2 w-full rounded-2xl bg-gray-900 text-white font-bold py-3.5 disabled:opacity-30"
         >
-          다음 모집 알림 받기
+          동의하고 다음 모집 알림 받기
         </button>
         <button type="button" onClick={dismiss} className="mt-2 w-full text-xs text-gray-400 py-2">
           괜찮아요, 그냥 볼게요

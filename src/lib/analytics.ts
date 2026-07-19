@@ -60,6 +60,7 @@ export const analytics = {
   applicationComplete: (props?: Props) => track('application_complete', props),
   depositStart: () => track('deposit_start'),
   depositCopyAccount: () => track('deposit_copy_account'),
+  depositTossClick: () => track('deposit_toss_click'),
   // source 구분: 'mouseout'=진짜 이탈 의도, 'hidden'=탭 전환·타 앱 이동(입금하러 은행 앱 등)
   exitIntent: (source: 'mouseout' | 'hidden') => track('exit_intent', { source }),
   experimentView: (name: string, variant: string) =>

@@ -51,8 +51,10 @@ function App() {
     if (params.get('apply') === '1') {
       analytics.modalOpen()
       setModalOpen(true)
-      // 주소창 정리 (새로고침 시 재오픈 방지)
-      window.history.replaceState({}, '', window.location.pathname)
+      // 주소창 정리 (새로고침 시 재오픈 방지) — UTM 등 다른 파라미터는 보존해야 GA 채널 집계가 산다
+      params.delete('apply')
+      const rest = params.toString()
+      window.history.replaceState({}, '', window.location.pathname + (rest ? `?${rest}` : ''))
     }
   }, [])
 
@@ -278,6 +280,17 @@ function App() {
               <p className="mt-1 text-sm text-gray-600">
                 입금자명: <span className="font-semibold text-gray-900">{success.name}</span>
               </p>
+              {DEPOSIT.tossLink && (
+                <a
+                  href={DEPOSIT.tossLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => analytics.depositTossClick()}
+                  className="mt-3 block w-full rounded-xl bg-[#3182F6] text-white text-center font-bold py-3 text-sm"
+                >
+                  토스로 1초 송금하기
+                </a>
+              )}
               <ul className="mt-3 space-y-1 border-t border-gray-200 pt-3">
                 {DEPOSIT.rules.map((r) => (
                   <li key={r} className="flex gap-1.5 text-xs text-gray-500">

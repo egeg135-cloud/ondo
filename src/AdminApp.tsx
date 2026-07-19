@@ -474,6 +474,7 @@ function ApplicantCard({
     invited?: boolean
     status?: AdminApplication['status']
     sessionDate?: string
+    attended?: boolean
   }) {
     setBusy(true)
     try {
@@ -542,6 +543,15 @@ function ApplicantCard({
         <ToggleTag on={a.invited} disabled={busy} onClick={() => patch({ invited: !a.invited })}>
           초대
         </ToggleTag>
+        {isConfirmed && (
+          <ToggleTag
+            on={a.attended === true}
+            disabled={busy}
+            onClick={() => patch({ attended: !(a.attended === true) })}
+          >
+            참석
+          </ToggleTag>
+        )}
         <button
           type="button"
           disabled={busy}
